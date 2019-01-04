@@ -23,8 +23,8 @@ chatserver 通过比较这两个dataOffset 的大小可以判断chatserver 上�
 
   ![chatserver](cj1.png)
 
-     Visitor 或者Agent 通过服务器chatA server 聊天，visitor 通过心跳接口或者发送信息接口 将本地的数据偏移量visitorDataOffset和agentDataOffset 和聊天信息传到chatserver ，chatserver 接收到新的信息以后
-     将更新以后的visitorDataOffsethu和agentDataOffset和最新的聊天信息返回给visitor或者agent,visitor或者agent获取返回值以后，对本地记录进行更新（更新本地的visitorDataOffset和agentDataOffset还有本地的聊天记录）。
+  Visitor 或者Agent 通过服务器chatA server 聊天，visitor 通过心跳接口或者发送信息接口 将本地的数据偏移量visitorDataOffset和agentDataOffset 和聊天信息传到chatserver ，chatserver 接收到新的信息以后
+  将更新以后的visitorDataOffsethu和agentDataOffset和最新的聊天信息返回给visitor或者agent,visitor或者agent获取返回值以后，对本地记录进行更新（更新本地的visitorDataOffset和agentDataOffset还有本地的聊天记录）。
  
 
 ###  切换后场景
