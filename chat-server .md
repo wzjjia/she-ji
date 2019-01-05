@@ -121,7 +121,7 @@
 
 
  ```c#
-   ReturnReuslt Rebuild(Chat chat)
+   bool Rebuild(Chat chat)
    {
        chat.Rebuild(chat);
        ....
@@ -276,7 +276,7 @@
 ```
 
 
-  ### gete message Result
+  ### get message Result
 
   ```c#
      publc class GetMessageResult
@@ -289,6 +289,11 @@
      }
 
 ```
+
+
+ 
+
+
 
 
 ### ChatMessage
