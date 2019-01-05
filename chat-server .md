@@ -37,6 +37,14 @@
 
   ![chatserver](send.png)
 
+  visitor或者agent 向chat server 发送聊天信息的时候：
+  1. 如果该聊天不存在，chat server根据聊天chatId 创建该聊天，然后返回AddMessageResult{code=1,visitorOffset=-1,agentOffset=-1} 给visitor或者agent ，告知visitor或者agent ，调用聊天重建接口进行聊天重建。
+  2. 如果当前聊天存在，且chat.visitorOffset和chat.agentOffset的值不小于 visitor或者agent 本地记录的visitorOffset和agentOffset，将生成一条Message,存放到chat.VisitorMesages或者chat.AgentMessages中。
+  3. 如果当前聊天存在，且chat.visitorOffset和chat.agentOffset的值有一个小于  visitor或者agent 本地记录的visitorOffset和agentOffset时，将返回AddMessageResult{code=1,visitorOffset=chat.visitorOffset,agentOffset=chat.agentOffset} ，告知visitor或者agent 进行增量数据重建。
+
+
+
+
  ```c#
    AddMessageResult AddVisitorMessage(int chatId,int visitorOffset,int agentOffset,string message)
    {
@@ -89,6 +97,12 @@
 ## 接收聊天信息
 
   ![chatserver](receive.png)
+
+visitor或者agent 向chat server 请求最新的聊天的记录的时：
+1. 如果该聊天不存在，chat server根据聊天chatId 创建该聊天，然后返回AddMessageResult{code=1,visitorOffset=-1,agentOffset=-1} 给visitor或者agent ，告知visitor或者agent ，调用聊天重建接口进行聊天重建。
+  2. 如果当前聊天存在，且chat.visitorOffset和chat.agentOffset的值不小于 visitor或者agent 本地记录的visitorOffset和agentOffset，将返回未读信息列表给visitor或者agent。
+  3. 如果当前聊天存在，且chat.visitorOffset和chat.agentOffset的值有一个小于 visitor或者agent 本地记录的visitorOffset和agentOffset时，将返回AddMessageResult{code=1,visitorOffset=chat.visitorOffset,agentOffset=chat.agentOffset} ，告知visitor或者agent 进行增量数据重建。
+
 
 
  ```c#
