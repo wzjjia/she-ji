@@ -6,43 +6,93 @@
 
 ...
 ## 设计目标
-
-chatserver服务器发生切换的时候，通过agent和visitor的本地数据对chatserver切换的服务器进行聊天数据的重建，确保聊天连续性和数据完整性
+ 1. visitor和agent 完成向chatserver发送聊天消息。
+ 2. visitor和agent 完成从chatserver的接收消息。
+ 3. chatserver服务器发生切换，完成聊天重建。
 
 ## 总体思路
  
-Visitor或者agent 向chatserver 发送信息的时候，将在http头信息中传入两个数据偏移量参数visitorDataOffset和agentDataOffset（这两个参数分别记录了visitor或者agent 本地记录的聊天信息的数据版本号，该版本号可以标识本地消息的新旧程度） 发送到chatserver：
-chatserver 通过比较这两个dataOffset 的大小可以判断chatserver 上面的visitor和anget 的聊天记录是不是比（visitor或者agent）本地存放的聊天记录新，如果chatserver 聊天记录比（visitor或者agent） 端的聊天记录新的话，chat server 接收到新的信息以后将根据情况递增chatserver本地的chat 对象的visitorDataOffset或者agentDataOffset的值并且将最新的未读聊天信息和更新后的dataoffset返回给visitor或者agent,visitor或者agent获取返回值以后，对本地聊天记录进行更新，并且更新本地的visitordataOffset和agentDataOffset。 如果chatserver的聊天记录比较老的话，将返回结果通知visitor或者agent，进行数据重建。
-
-
-
+ 1. visitor或者agent 的聊天，在本地将会存放visitorOffset和agentOffset 分别用于标识visitor和agent 的聊天消息版本。
+ 2. 向chatserver 发送或者获取新消息的时候，将visitorOffset和agentOffset做为参数发送到chatserver.
+ 3. chat server 接收到信息以后，将会拿参数 visitorOffset和agentOffset 比较 chat server 本地chat 中的
+ visitorOffset和agentOffset，如果本地的offset任意一个 小于 visitor或者agent的 visitorOffset和agentOffset，将会通知visitor或者agent 调用聊天重建接口进行数据同步。
+ 4. 数据同步期间，发送和获取记录操作，发送和获取操作将等待重建完成后再进行。
 
 ##  场景
 
-###  正常场景
+###  服务器未发生切换
 
-  ![chatserver](cj1.png)
+  ![chatserver](c1.png)
 
-  Visitor 或者Agent 通过服务器chatA server 聊天，visitor 通过心跳接口或者发送信息接口 将本地的数据偏移量visitorDataOffset和agentDataOffset 和聊天信息传到chatserver ，chatserver 接收到新的信息以后
-  将更新以后的visitorDataOffsethu和agentDataOffset和最新的聊天信息返回给visitor或者agent,visitor或者agent获取返回值以后，对本地记录进行更新（更新本地的visitorDataOffset和agentDataOffset还有本地的聊天记录）。
+  agent A 和visitor A 的聊天存放在chatA server,agent和visitor的聊天记录跟chatA server 聊天记录一致，这时数据不需要重建.
+
+
+###  服务器切换
+
+  ![chatserver](c2.png)
+  chatA server down掉以后，agentA 和visitorA 都连接到 ChatB Server 上，但是chatB server 并没有agent A和 visitor A 的聊天，这个时候就需要进行聊天重建。
+
+
+##  发送聊天信息
+
+  ![chatserver](send.png)
+
+ ```c#
+   AddMessageResult AddVisitorMessage(int chatId,int visitorOffset,int agentOffset,string message)
+   {
+    
+         if(!exists(chatId)) 
+         {
+
+           create chat(chatId);
+           return new ReturnResult{code=1,visitorOffset=-1,agentOffset=-1};
+         }
+        
+        if(visitorOffset>chat.visitorOffset||agentOffset>chat.agentOffset)
+        return new ReturnResult{code=1,visitorOffset=chat.visitorOffset};
+      
+       Message message=new Message(){id=xxxx,context=message,sendTime=xxxx};
+       chat.AddVisitorMessage(message);
+       return new ReturnResult{code=1,visitorOffset=chat.visitorOffset,Message=message};
+
+   }
+
+   AddMessageResult AddAgentMessage(int chatId,int agentId,int visitorOffset,int agentOffset,string message)
+   {
+    
+         if(!exists(chatId)) 
+         {
+
+           create chat(chatId);
+           return new ReturnResult{code=1,visitorDataOffset=-1,agentDataOffset=-1};
+         }
+        
+
+        if(visitorOffset>chat.visitorOffset||agentOffset>chat.agentOffset)
+        return new ReturnResult{code=1,agentDataOffset=chat.agentDataOffset};
+      
+       Message message=new Message(){id=xxxx,context=message,sendTime=xxxx};
+
+       chat.AddAgentMessage(agentId,message);
+       return new ReturnResult{code=1,agentOffset=chat.agentOffset,Message=message};
+
+   }
+
+
+  
+```
  
 
-###  切换后场景
 
 
- ![chatserver](cj2.png)
 
-   chatA server 服务器down掉以后，服务器切换到chatB server,visitor或者agent再给chatserver发送信息，这个时候，消息将发送到chatB server :
-   1. chatb server 判断是否存在该聊天，如果不存在,就根据chatid 创建一个chat,然后返回ReturnResult{code=1,VisitorDataOffset=-1,AgentDataOffset=-1} 给visitor或者agent端，通知其进行全量数据重建，visitorDataOffset=-1表示visitor的聊天记录全部重新重建，agentDataOffset同理。
-  2. 如果聊天存在的话，比较chat.visitorDataOffset和chat.agentDataOffset跟参数visitorDataset,agentDataset的大小，如果chat.visitorDataOffset小于visitorDataOffset,或者chat.agentDataOffset小于agentDataOffset 时,chatserver 将返回ReturnResult{code=1,visiorDataOffset=chat.visitorDataOffset,agentDataOffset=chat.agentDataOffset}，通知visitor或者agent 进行数据增量重建。
-   
-   
+## 接收聊天信息
 
-![chatserver](cj3.png)
+  ![chatserver](receive.png)
 
 
  ```c#
-   ReturnReuslt SendMessage(int chatId,int visitorDataOffset,int agentDataOffset,string message)
+   GetMessageResult GetNewMessage(int chatId,int visitorOffset,int agentOffset,string message)
    {
     
          if(!exists(chatId)) 
@@ -52,28 +102,33 @@ chatserver 通过比较这两个dataOffset 的大小可以判断chatserver 上�
            return new ReturnResult{code=1,visitorDataOffset=-1,agentDataOffset=-1};
          }
        
-        if(visitorDataOffset>chat.visitorDataOffset||agentDataOffset>chat.agentDataOffset)
-        return new ReturnResult{code=1,visitorDataOffset=chat.visitorDataOffset,agentDataOffset=chat.agentDataOffset};
-
-        ...
+        if(visitorOffset>chat.visitorOffset||agentOffset>chat.agentOffset)
+        return new ReturnResult{code=1,visitorOffset=chat.visitorOffset,agentOffset=chat.agentOffset};
+        
+        ....
    }
 
-   bool Rebuild(Chat chat)
-   {
-       int rebuildCount=0;
-       while(!chat.Rebuild(chat))
-       {
-           if(rebuildCount>5)
-           break;
-           Thread.sleep(500);
-           rebuildCount++;
-       }
-       
-   }
-```
  
+```
 
 
+
+## 聊天重建
+
+   chatserver 返回请求聊天重建结果以后，visitor或者agent 将本地存放的chat 数据发送到chatserver,chat server 根据情况更新服务器内chat 数据。
+
+  ![chatserver](rebuild.png)
+
+
+ ```c#
+   ReturnReuslt Rebuild(Chat chat)
+   {
+       chat.Rebuild(chat);
+       ....
+   }
+
+ 
+```
 
 
 
@@ -112,10 +167,10 @@ chatserver 通过比较这两个dataOffset 的大小可以判断chatserver 上�
   }
   ```
 
-4.  聊天记录
+4.  聊天消息
    ```c#
    public class Message {
-    public long Id{get;set;}
+    public object Id{get;set;}
     public string Content{get;set;}
     public DateTime  SendTime{get;set;}
     public DateTime DataOffset{get;set;}
@@ -136,22 +191,37 @@ chatserver 通过比较这两个dataOffset 的大小可以判断chatserver 上�
     public int VisitorOffset{get;set;}
     public int AgentOffset{get;set;}
     public DateTime BeginTime{get;set;}
-    public bool IsReBuilding{get;set;}
+
+    private object IsReBuilding{get;set;}
+    private object IsAddMessage{get;set;}
 
     ...
-    public int AddVisitorMessage(Message message)
+    public Message AddVisitorMessage(Message message)
     {
+       lock(IsReBuilding)
+       {
+
         VisitorOffset+=1;
+        message.DataOffset=AgentOffset;
         VisitorMessages.Add(message);
         ...
-        return VisitorOffset;
+         return message;
+       }
     }
-    public int AddAgentMessage(int agentId,Message message)
+    public Message AddAgentMessage(int agentId,Message message)
     {
-        AgentOffset+=1;
-        AgentMessages.Add(message);
-        ...
-        return AgentOffset;
+      lock(IsReBuilding)
+       {
+        lock(IsAddMessage)
+        {
+            AgentOffset+=1;
+            message.DataOffset=AgentOffset;
+            AgentMessages.Add(message);
+            ...
+           
+           return message;
+        }
+       }
     }
     public  SortedList<int,Message> GetAllMessage()
     {
@@ -162,20 +232,23 @@ chatserver 通过比较这两个dataOffset 的大小可以判断chatserver 上�
     }
     public List<Message> GetNewMessage(int visitorOffset,agentOffset)
     {
+      lock(IsReBuilding)
+       {
            List<Message> newMessages=new  List<Message>();
            newMessages.AddRange( VisitorMessages.Where(r => r.DataOffset > visitorOffset));
            newMessages.AddRange( AgentMessages.Where(r => r.DataOffset > AgentOffset));
           return newMessages.Sort(rr=>r.SendTime);
+       }
     }
 
     public bool Rebuild(Chat chat)
     {
-       if(IsReBuilding) return false;
+      
        lock(IsReBuilding)
        {
-           IsReBuilding=true;
-           ....
-           IsReBuilding=fasle;
+            //1.求chat.VisitorMessages 和 this.VisitorMessages的差集（根据ID判断）
+            //2.将该差集循环加入this.VisitorMessages 中.
+            //3.this.VisitorMessages 按DataOffset 排序，然后重新赋值给this.VisitorMessages 
        }
         
     }
@@ -188,10 +261,25 @@ chatserver 通过比较这两个dataOffset 的大小可以判断chatserver 上�
 
 ##  Chatserver API Data Struct
 
-  ### ReturnResult
+  ### add message Result
 
   ```c#
-     publc class ReturnResult
+     publc class AddMessageResult
+     {
+          public int Code{get;set;} //0 success,-1 error ,1 data rebuild
+          public int VisitorOffset{get;set;} //visitor 发送消息的有该属性，值为当前visitorOffset
+          public int AgentOffset{get;set;}   //agent 发送信息的时候有 该属性,值为当前agentOffset
+          public ChatMessage Message{get;set;}
+          ...
+     }
+
+```
+
+
+  ### gete message Result
+
+  ```c#
+     publc class GetMessageResult
      {
           public int Code{get;set;} //0 success,-1 error ,1 data rebuild
           public int VisitorDataOffset{get;set;}
@@ -201,6 +289,8 @@ chatserver 通过比较这两个dataOffset 的大小可以判断chatserver 上�
      }
 
 ```
+
+
 ### ChatMessage
   ```c#
      publc class ChatMessage
