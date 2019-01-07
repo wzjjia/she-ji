@@ -43,7 +43,7 @@
 
 
  ```c#
-   AddMessageResult AddVisitorMessage(int chatId,int visitorOffset,int agentOffset,string message)
+   AddMessageResult AddVisitorMessage(int chatId,int visitorOffset,int agentOffset,int  sysOffset,string message)
    {
     
          if(!exists(chatId)) 
@@ -53,13 +53,13 @@
          }
         
 
-        if(visitorOffset>chat.visitorOffset||agentOffset>chat.agentOffset)
+        if(visitorOffset>chat.visitorOffset||agentOffset>chat.agentOffset||sysOffset>chat.SysOffset)
          return false;
          ...
 
    }
 
-   bool AddAgentMessage(int chatId,int agentId,int visitorOffset,int agentOffset,string message)
+   bool AddAgentMessage(int chatId,int agentId,int visitorOffset,int agentOffset,int  sysOffset,string message)
    {
     
          if(!exists(chatId)) 
@@ -68,7 +68,7 @@
            return false;
          }
         
-        if(visitorOffset>chat.visitorOffset||agentOffset>chat.agentOffset)
+        if(visitorOffset>chat.visitorOffset||agentOffset>chat.agentOffset||sysOffset>chat.SysOffset)
          return false;
       
          ...
@@ -105,7 +105,7 @@ visitor或者agent 向chat server 请求最新的聊天的记录的时：
            return new ReturnResult{code=1,visitorDataOffset=-1,agentDataOffset=-1,sysOffset=-1};
          }
        
-        if(visitorOffset>chat.visitorOffset||agentOffset>chat.agentOffset)
+        if(visitorOffset>chat.visitorOffset||agentOffset>chat.agentOffset||sysOffset>chat.SysOffset)
         return new ReturnResult{code=1,visitorOffset=chat.visitorOffset,agentOffset=chat.agentOffset,sysOffset=chat.sysOffset};
         
         ....
