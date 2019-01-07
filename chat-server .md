@@ -14,9 +14,9 @@
  
  1. visitor或者agent 的聊天，在本地将会存放visitorOffset和agentOffset 分别用于标识visitor和agent 的聊天消息版本。
  2. 向chatserver 发送或者获取新消息的时候，将visitorOffset和agentOffset做为参数发送到chatserver.
- 3. chat server 接收到信息以后，将会拿参数 visitorOffset和agentOffset 比较 chat server 本地chat 中的
- visitorOffset和agentOffset，如果本地的offset任意一个 小于 visitor或者agent的 visitorOffset和agentOffset，将会通知visitor或者agent 调用聊天重建接口进行数据同步。
- 4. 数据同步期间，发送和获取记录操作，发送和获取操作将等待重建完成后再进行。
+ 3. 从chatserver 获取消息的时候，chat server 接收到信息以后，将会拿参数 visitorOffset和agentOffset 比较 chat server 本地chat 中的visitorOffset和agentOffset，如果本地的offset任意一个 小于 visitor或者agent的 visitorOffset和agentOffset，将会通知visitor或者agent 调用聊天重建接口进行数据同步。
+ 4. 向chatserver发送新消息的时候，如果chat server chat 不存在或者chat server 本地chat 中的visitorOffset和agentOffset，如果本地的offset任意一个 小于 visitor或者agent的 visitorOffset和agentOffset，消息返回发送失败，客户端循环发送，直到发送成功。
+ 5. 数据同步期间，发送和获取记录操作，发送和获取操作将等待重建完成后再进行。
 
 ##  场景
 
@@ -37,10 +37,7 @@
 
   ![chatserver](send.png)
 
-  visitor或者agent 向chat server 发送聊天信息的时候：
-  1. 如果该聊天不存在，chat server根据聊天chatId 创建该聊天，然后返回AddMessageResult{code=1,visitorOffset=-1,agentOffset=-1} 给visitor或者agent ，告知visitor或者agent ，调用聊天重建接口进行聊天重建。
-  2. 如果当前聊天存在，且chat.visitorOffset和chat.agentOffset的值不小于 visitor或者agent 本地记录的visitorOffset和agentOffset，将生成一条Message,存放到chat.VisitorMesages或者chat.AgentMessages中。
-  3. 如果当前聊天存在，且chat.visitorOffset和chat.agentOffset的值有一个小于  visitor或者agent 本地记录的visitorOffset和agentOffset时，将返回AddMessageResult{code=1,visitorOffset=chat.visitorOffset,agentOffset=chat.agentOffset} ，告知visitor或者agent 进行增量数据重建。
+  visitor或者agent 向chat server 发送聊天信息的时候：如果chat server chat 不存在或者chat server 本地chat 中的visitorOffset和agentOffset，如果本地的offset任意一个 小于 visitor或者agent的 visitorOffset和agentOffset，消息返回发送失败，客户端循环发送，直到发送成功。
 
 
 
@@ -52,37 +49,29 @@
          if(!exists(chatId)) 
          {
 
-           create chat(chatId);
-           return new ReturnResult{code=1,visitorOffset=-1,agentOffset=-1};
+           return false;
          }
         
+
         if(visitorOffset>chat.visitorOffset||agentOffset>chat.agentOffset)
-        return new ReturnResult{code=1,visitorOffset=chat.visitorOffset};
-      
-       Message message=new Message(){id=xxxx,context=message,sendTime=xxxx};
-       chat.AddVisitorMessage(message);
-       return new ReturnResult{code=1,visitorOffset=chat.visitorOffset,Message=message};
+         return false;
+         ...
 
    }
 
-   AddMessageResult AddAgentMessage(int chatId,int agentId,int visitorOffset,int agentOffset,string message)
+   bool AddAgentMessage(int chatId,int agentId,int visitorOffset,int agentOffset,string message)
    {
     
          if(!exists(chatId)) 
          {
 
-           create chat(chatId);
-           return new ReturnResult{code=1,visitorDataOffset=-1,agentDataOffset=-1};
+           return false;
          }
         
-
         if(visitorOffset>chat.visitorOffset||agentOffset>chat.agentOffset)
-        return new ReturnResult{code=1,agentDataOffset=chat.agentDataOffset};
+         return false;
       
-       Message message=new Message(){id=xxxx,context=message,sendTime=xxxx};
-
-       chat.AddAgentMessage(agentId,message);
-       return new ReturnResult{code=1,agentOffset=chat.agentOffset,Message=message};
+         ...
 
    }
 
@@ -175,9 +164,10 @@ visitor或者agent 向chat server 请求最新的聊天的记录的时：
    ```c#
   public enum MessageType
   {
-     Visitor=1,--访客
-     Agent=2,--坐席
-     Bot=3,--bot
+     System=1 ,--系统信息
+     Visitor=2,--访客
+     Agent=3,--坐席
+     Bot=4,--bot
   }
   ```
 
@@ -199,43 +189,36 @@ visitor或者agent 向chat server 请求最新的聊天的记录的时：
     
     private List<Message> VisitorMessages{get;set;}
     private List<Message> AgentMessages{get;set;}
-
+    private List<Message> SystemMessage{get;set;}
     public object Id{get;set;}
     public Visitor Visitor{get;set;}
     public int VisitorOffset{get;set;}
     public int AgentOffset{get;set;}
     public DateTime BeginTime{get;set;}
 
-    private object IsReBuilding{get;set;}
-    private object IsAddMessage{get;set;}
 
     ...
     public Message AddVisitorMessage(Message message)
     {
-       lock(IsReBuilding)
-       {
+  
 
         VisitorOffset+=1;
         message.DataOffset=AgentOffset;
         VisitorMessages.Add(message);
         ...
          return message;
-       }
+     
     }
     public Message AddAgentMessage(int agentId,Message message)
     {
-      lock(IsReBuilding)
-       {
-        lock(IsAddMessage)
-        {
+      
             AgentOffset+=1;
             message.DataOffset=AgentOffset;
             AgentMessages.Add(message);
             ...
            
            return message;
-        }
-       }
+  
     }
     public  SortedList<int,Message> GetAllMessage()
     {
@@ -246,24 +229,22 @@ visitor或者agent 向chat server 请求最新的聊天的记录的时：
     }
     public List<Message> GetNewMessage(int visitorOffset,agentOffset)
     {
-      lock(IsReBuilding)
-       {
+     
            List<Message> newMessages=new  List<Message>();
            newMessages.AddRange( VisitorMessages.Where(r => r.DataOffset > visitorOffset));
            newMessages.AddRange( AgentMessages.Where(r => r.DataOffset > AgentOffset));
           return newMessages.Sort(rr=>r.SendTime);
-       }
+     
     }
 
     public bool Rebuild(Chat chat)
     {
       
-       lock(IsReBuilding)
-       {
+      
             //1.求chat.VisitorMessages 和 this.VisitorMessages的差集（根据ID判断）
             //2.将该差集循环加入this.VisitorMessages 中.
             //3.this.VisitorMessages 按DataOffset 排序，然后重新赋值给this.VisitorMessages 
-       }
+   
         
     }
 
@@ -275,19 +256,7 @@ visitor或者agent 向chat server 请求最新的聊天的记录的时：
 
 ##  Chatserver API Data Struct
 
-  ### add message Result
-
-  ```c#
-     publc class AddMessageResult
-     {
-          public int Code{get;set;} //0 success,-1 error ,1 data rebuild
-          public int VisitorOffset{get;set;} //visitor 发送消息的有该属性，值为当前visitorOffset
-          public int AgentOffset{get;set;}   //agent 发送信息的时候有 该属性,值为当前agentOffset
-          public ChatMessage Message{get;set;}
-          ...
-     }
-
-```
+ 
 
 
   ### get message Result
