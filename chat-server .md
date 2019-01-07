@@ -270,7 +270,7 @@ visitor或者agent 向chat server 请求最新的聊天的记录的时：
 
    }
    ```
-   Visitor和agent的offset 分开记录分别为visitorOffset和agentOffset,visitor的偏移量visitorOffset从0开始递增，每次递增1; agent的偏移量agentOffset从0开始递增，每次递增1.
+   
 
 
 ##  Chatserver API Data Struct
@@ -284,8 +284,9 @@ visitor或者agent 向chat server 请求最新的聊天的记录的时：
      publc class GetMessageResult
      {
           public int Code{get;set;} //0 success,-1 error ,1 data rebuild
-          public int VisitorDataOffset{get;set;}
-          public int AgentDataOffset{get;set;}
+          public int VisitorOffset{get;set;}
+          public int AgentOffset{get;set;}
+          public int SysOffset{get;set;}
           public List<ChatMessage> Messages{get;set;}
           ...
      }
@@ -317,6 +318,7 @@ visitor或者agent 向chat server 请求最新的聊天的记录的时：
           public object Id{get;set;}
           public int VisitorOffset{get;set;}
           public int AgentOffset{get;set;}
+          public int SysOffset{get;set;}
           public List<ChatMessage> Messages{get;set;}
           ...
      }
