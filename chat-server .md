@@ -55,6 +55,7 @@
 
         if(visitorOffset>chat.visitorOffset||agentOffset>chat.agentOffset||sysOffset>chat.SysOffset)
          return false;
+  
          ...
 
    }
@@ -258,13 +259,9 @@ visitor或者agent 向chat server 请求最新的聊天的记录的时：
 
     public bool Rebuild(Chat chat)
     {
-      
-      
-            //1.求chat.VisitorMessages 和 this.VisitorMessages的差集（根据ID判断）
-            //2.将该差集循环加入this.VisitorMessages 中.
-            //3.this.VisitorMessages 按DataOffset 排序，然后重新赋值给this.VisitorMessages 
-   
-        
+            //1.求chat.VisitorMessages 和 this.VisitorMessages的差集(chat.agentMessage)（根据ID判断）
+            //2.将该差集循环加入this.VisitorMessages 中，并且对新增的message的order重新按当前集合索引重新赋值
+            //chat.AgentMessages和chat.SystemMesages的逻辑同上。
     }
 
 
