@@ -28,7 +28,7 @@
 
   
  |Event Name | Queues  | Description |    
-  | - | - | :-: | :-: | - | 
+  | - | - | :-: |
   | [Chat.Ended](#Chat.Ended) | 1. Chat.Ended.Persistence    2. Chat.Ended.Email 3. Chat.Ended.Ticket  4. Chat.Ended.Webhook 5. Chat.Ended.Salesforce 6. Chat.Ended.Zendesk |   |
   | [OfflineMessage.Submit](#OfflineMessage.Submit) | 1. OfflineMessage.Submit.Persistence 2. OfflineMessage.Submit.Email 3. OfflineMessage.Submit.Ticket 4. OfflineMessage.Submit.Webhook 5. OfflineMessage.Submit.Salesforce 6. OfflineMessage.Submit.Zendesk   |   |
   | [Visitor.Rating](#Visitor.Rating) | Visitor.Rating  |  |
