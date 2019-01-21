@@ -63,24 +63,24 @@
 ### Event Service And Queue Relationship
 
 
-  | Send Service  Name  | Send Service Binding Queue | Recive Service Name |Recive Service  Binding Queue |Event Name|
-  | - | :-: | :-: | :-: |:-: |
-  | Chat.Queued.SendService| Chat.Queued.SendQueue |Persistence.ReciveService|PersistenceQueue|[chat.queued](#chat.queued)|
-  | Chat.Started.SendService| Chat.Started.SendQueue |WebHook.ReciveService|WebHookQueue|[chat.started](#chat.started)|
-  | Chat.Ended.SendService| Chat.Ended.SendQueue |Chat.Ended.ReciveService|Chat.Ended.ReciveQueue|[chat.ended](#chat.ended)|
-  | Chat.Wrapup.Submitted.SendService| Chat.Wrapup.Submitted.SendQueue |Persistence.ReciveService|PersistenceQueue|[chat.wrapup.submitted](#chat.wrapup.submitted)|
-  | Chat.Rating.Submitted.SendService| Chat.Rating.Submitted.SendQueue |Persistence.ReciveService|PersistenceQueue|[chat.rating.submitted](#chat.rating.submitted)|
-  | Visitor.Landed.Submitted.SendService| Visitor.Landed.Submitted.SendQueue |Persistence.ReciveService|PersistenceQueue|[visitor.landed](#visitor.landed)|
-  | Visitor.Conversion.Achieved.SendService| Visitor.Conversion.Achieved.SendQueue |Persistence.ReciveService|PersistenceQueue|[visitor.conversion.achieved](#visitor.conversion.achieved)|
-  | Ban.Added.SendService| Ban.Added.SendQueue |Persistence.ReciveService|PersistenceQueue|[ban.added](#ban.added)|
-  | OfflineMessage.Submitted.SendService| OfflineMessage.Submitted.SendQueue |OfflineMessage.Submitted.ReciveService|OfflineMessage.Submitted.ReciveQueue|[offlineMessage.submitted](#offlineMessage.submitted)|
-  | Agent.Status.Changed.SendService| Agent.Status.Changed.SendQueue |Persistence.ReciveService|PersistenceQueue|[agent.status.changed](#agent.status.changed)|
-  | Agent.Preference.Changed.SendService| Agent.Preference.Changed.SendQueue |Persistence.ReciveService|PersistenceQueue|[agent.preference.changed](#agent.preference.changed)|
-  | AgentChat.Replied.SendService| AgentChat.Replied.SendQueue |Persistence.ReciveService|PersistenceQueue|[agentChat.replied](#agentChat.replied)|
-  | CannedMessage.Used.SendService| CannedMessage.Used.SendQueue |Persistence.ReciveService|PersistenceQueue|[cannedMessage.used](#cannedMessage.used)|
-  | AutoInvitation.Sent.SendService| AutoInvitation.Sent.SendQueue |Persistence.ReciveService|PersistenceQueue|[autoInvitation.sent](#autoInvitation.sent)|
-  | AutoInvitation.Accepted.SendService| AutoInvitation.Accepted.SendQueue |Persistence.ReciveService|PersistenceQueue|[autoInvitation.accepted](#autoInvitation.accepted)|
-  | AutoInvitation.Refused.SendService| AutoInvitation.Refused.SendQueue |Persistence.ReciveService|PersistenceQueue|[autoInvitation.refused](#autoInvitation.refused)|
+  |Event Name| Send Service  Name  | Send Service Binding Queue | Recive Service Name |Recive Service  Binding Queue |
+  | - | - | :-: | :-: | :-: |:-: |
+  |[chat.queued](#chat.queued)| Chat.Queued.SendService| Chat.Queued.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[chat.started](#chat.started)| Chat.Started.SendService| Chat.Started.SendQueue |WebHook.ReciveService|WebHookQueue|
+  |[chat.ended](#chat.ended)| Chat.Ended.SendService| Chat.Ended.SendQueue |Chat.Ended.ReciveService|Chat.Ended.ReciveQueue|
+  |[chat.wrapup.submitted](#chat.wrapup.submitted)| Chat.Wrapup.Submitted.SendService| Chat.Wrapup.Submitted.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[chat.rating.submitted](#chat.rating.submitted)| Chat.Rating.Submitted.SendService| Chat.Rating.Submitted.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[visitor.landed](#visitor.landed)| Visitor.Landed.Submitted.SendService| Visitor.Landed.Submitted.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[visitor.conversion.achieved](#visitor.conversion.achieved)| Visitor.Conversion.Achieved.SendService| Visitor.Conversion.Achieved.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[ban.added](#ban.added)| Ban.Added.SendService| Ban.Added.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[offlineMessage.submitted](#offlineMessage.submitted)| OfflineMessage.Submitted.SendService| OfflineMessage.Submitted.SendQueue |OfflineMessage.Submitted.ReciveService|OfflineMessage.Submitted.ReciveQueue|
+  |[agent.status.changed](#agent.status.changed)| Agent.Status.Changed.SendService| Agent.Status.Changed.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[agent.preference.changed](#agent.preference.changed)| Agent.Preference.Changed.SendService| Agent.Preference.Changed.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[agentChat.replied](#agentChat.replied)| AgentChat.Replied.SendService| AgentChat.Replied.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[cannedMessage.used](#cannedMessage.used)| CannedMessage.Used.SendService| CannedMessage.Used.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[autoInvitation.sent](#autoInvitation.sent)| AutoInvitation.Sent.SendService| AutoInvitation.Sent.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[autoInvitation.accepted](#autoInvitation.accepted)| AutoInvitation.Accepted.SendService| AutoInvitation.Accepted.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[autoInvitation.refused](#autoInvitation.refused)| AutoInvitation.Refused.SendService| AutoInvitation.Refused.SendQueue |Persistence.ReciveService|PersistenceQueue|
 
 
 ### Distributor Service And Queue  Relationship
@@ -113,8 +113,9 @@
   | - | :-: | :-: | :-: |:-: |
   | Error.SendService| Error.SendQueue |Error.ReciveService|ErrorQueue|Error|
 
+### Event And Queue Relationship Talbe
 
-## t_chatserver_event
+#### t_chatserver_event
 
 | Column  Name  | Type | Nullable |Default |Version |Primary key|Remark|
   | - | :-: | :-: | :-: |:-: |:-: |:-: |
@@ -126,7 +127,7 @@
   | ReciveQueueName| nvarchar(256) |no|''|1.0|false|接收队列名称|
 
 
-## t_chatserver_queue
+#### t_chatserver_queue
 
 | Column  Name  | Type | Nullable |Default |Version |Primary key|Remark|
   | - | :-: | :-: | :-: |:-: |:-: |:-: |
