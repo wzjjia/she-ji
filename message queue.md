@@ -146,7 +146,7 @@
 public class QueueData
 {
 
-  public int Type{get;set;} //1.chat.queued 2.chat.started 3.chat.visitor.replied 4.chat.agent.replied 5.chat.ended 6.chat.wrapup.submitted 7. chat.rating.submitted 8.visitor.landed 9.visitor.conversion.achieved 10.ban.added 11.offlineMessage.submitted 12.agent.status.changed 13.agent.preference.changed 14.agentChat.replied 15.cannedMessage.used 16.autoInvitation.sent 17.autoInvitation.accepted 18.autoInvitation.accepted
+  public EventType Type{get;set;} 
 
  public object Data{get;set;}
 
@@ -161,6 +161,7 @@ public class EventProducer
    
       IEventContext context=  EventFactory.Open();
       QueueData queueData=new QueueData();
+      queueData.Type=EventType.chatEnded;
       queueData.Data=chat;
       string data=SerializeObject(queueData);
       return  context.Put(data);
@@ -170,7 +171,7 @@ public class EventProducer
    {
       IEventContext context=  EventFactory.Open();
        QueueData queueData=new QueueData();
-       queueData.Type==11;
+       queueData.Type=EventType.offlineMessageSubmitted;
       queueData.Data=offlineMessage;
       string data=SerializeObject(queueData);
       return  context.Put("chat.ended",data);
@@ -211,7 +212,7 @@ void PersistenceConsumer()
        switch(queueData.Type)
        {
          ...
-         case EventType.OfflineMessage:
+         case EventType.offlineMessageSubmitted:
          //持久化offlinemessage
          break;
          ...
@@ -892,24 +893,24 @@ public class QueueData
 public enum EventType
 {
 none=0,
-chat.queued =1,
-chat.started=2 ,
-chat.visitor.replied=3 ,
-chat.agent.replied =4,
-chat.ended =5,
-chat.wrapup.submitted=6 ,
-chat.rating.submitted =7,
-visitor.landed =8,
-visitor.conversion.achieved =9,
-ban.added =10,
-offlineMessage.submitted=11,
-agent.status.changed =12,
-agent.preference.changed=13 ,
-agentChat.replied =14,
-cannedMessage.used =15,
-autoInvitation.sent=16 ,
-autoInvitation.accepted=17 ,
-autoInvitation.accepted=18
+chatQueued =1,
+chatStarted=2 ,
+chatVisitorReplied=3 ,
+chatAgentReplied =4,
+chatEnded =5,
+chatWrapupSubmitted=6 ,
+chatRatingSubmitted =7,
+visitorLanded =8,
+visitorConversionAchieved =9,
+banAdded =10,
+offlineMessageSubmitted=11,
+agentStatusChanged =12,
+agentPreferenceChanged=13 ,
+agentChatReplied =14,
+cannedMessageUsed =15,
+autoInvitationSent=16 ,
+autoInvitationAccepted=17 ,
+autoInvitationAccepted=18
    
 }
 
