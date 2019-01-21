@@ -12,51 +12,304 @@
 ## 总体思路
   ![mq](mq.png)
   Chat Server 一些同步的消息处理，将采用 service broker 进行异步解耦, consumer service 及时的消费service broker 中数据，完成后续处理流程。
-  1. 消息处理流程：chat server 推送事件，将事件消息写入 service broker event queue事件队列中，Distributor service 负责将这些等待处理的事件信息推送到订阅了这些事件信息的 data queue 中，以供具体的消费者consumer去消费这些数据。
-  2. 事件队列和订阅了这些事件的具体数据队列data queue 之间的关系存放到数据库中，Distributor service 定时更新关系数据。
-  3. Remote Event MQ Server 为远程事件队列服务器，Main Event MQ Server down掉以后事件将会发送到上面，同时也作为副服务器的事件队列服务器。
-  4. Remote Event MQ Server 上的事件数据，最终会被主服务器的Distribute Service 分发服务把事件分派到关注这些事件的真实数据队列中data MQ Server。
-  5. 最终consumer service 将会从data MQ server 中 拿出这些数据，消费掉。
+  1. 消息处理流程：chat server 推送事件，将事件消息写入 service broker event queue Server 中的事件队列中， 存储过程负责将这些等待处理的事件信息写入到订阅了这些事件信息的 data queue 中（订阅关系配置在第2点中），以供具体的消费者consumer去消费这些数据。
+  2. service broker event queue 和data queue 的关系配置在表 [t_chatserver_event](#t_chatserver_event)和 [t_chatserver_queue](#t_chatserver_queue)中。
+  3. Remote  Service Broker Event Queue Server 为远程事件队列服务器，Main Service Broker Event Queue Server down掉以后事件将会发送到上面，同时也作为副服务器的事件队列服务器。
+  4. Remote  Service Broker Event Queue Server 上的事件数据， 会通过service broker的配置将数据同步到主服务器上的data queue中。
+  5. 最终consumer service 将会从data queue 中 拿出这些数据，消费掉，完成最后的流程处理。
 
 
-
-
-
- 
 
 ## Events
 
   
- |Event Name | Queues  | Description |    
-  | - | - | :-: |
-  | [Chat.Ended](#Chat.Ended) | 1. Chat.Ended.Persistence    2. Chat.Ended.Email 3. Chat.Ended.Ticket  4. Chat.Ended.Webhook 5. Chat.Ended.Salesforce 6. Chat.Ended.Zendesk |   |
-  | [OfflineMessage.Submit](#OfflineMessage.Submit) | 1. OfflineMessage.Submit.Persistence 2. OfflineMessage.Submit.Email 3. OfflineMessage.Submit.Ticket 4. OfflineMessage.Submit.Webhook 5. OfflineMessage.Submit.Salesforce 6. OfflineMessage.Submit.Zendesk   |   |
-  | [Visitor.Rating](#Visitor.Rating) | Visitor.Rating  |  |
-  | [Agent.Wrapup](#Agent.Wrapup) | Agent.Wrapup  |   |
-  | [CannedMessage.UseLog](#CannedMessage.UseLog) |  CannedMessage.UseLog |   |
-  | [PrivateMessage.Log](#PrivateMessage.Log) |  PrivateMessage.Log |   |
-  | [ChatQueue.Log](#ChatQueue.Log) |  ChatQueue.Log |   |
-  | [AgentStatus.Log](#AgentStatus.Log) |  AgentStatus.Log |   |
-  | [AutoInvitation.Log](#AutoInvitation.Log) |  AutoInvitation.Log |   |
-  | [ManualInvitation.Log](#ManualInvitation.Log) |  ManualInvitation.Log |   |
-  | [Visit.Log](#Visit.Log) |  Visit.Log |   |
-  | [Conversion.Log](#Conversion.Log) |  Conversion.Log |   |
-  | [Agent.SavePreference](#Agent.SavePreference) |  Agent.SavePreference |   |
-  | [Agent.Ban](#Agent.Ban) |  Agent.Ban |   |
+ |Event Name |  Description |    
+  | - | :-: |
+  | [chat.queued](#chat.queued) |  chat 排队事件|   |
+  | [chat.started](#chat.started) | chat 聊天开始事件  |   
+  | [chat.visitor.replied](#chat.visitor.replied) | 访客回复消息事件  |   
+  | [chat.agent.replied](#chat.agent.replied) |  坐席回复消息事件 |  
+  | [chat.ended](#chat.ended) | 聊天结束事件 |   
+  | [chat.wrapup.submitted](#chat.wrapup.submitted) |wrapup 提交事件 |   
+  | [chat.rating.submitted](#chat.rating.submitted) | rating 提交事件|   
+  | [visitor.landed](#visitor.landed) |访客登入 |  
+  | [visitor.conversion.achieved](#visitor.conversion.achieved) |有效客户转换事件 |   
+  | [ban.added](#ban.added) | 添加黑名单事件|   
+  | [offlineMessage.submitted](#offlineMessage.submitted) |离线留言事件 |   
+  | [agent.status.changed](#agent.status.changed) | 坐席状态改变事件|   
+  | [agent.preference.changed](#agent.preference.changed) | 坐席个性化设置变更事件|   
+  | [agentChat.replied](#agentChat.replied) |坐席私聊回复事件 |   
+  | [cannedMessage.used](#cannedMessage.used) | 快捷信息使用事件 |   
+  | [autoInvitation.sent](#autoInvitation.sent) | 自动邀请发送事件 |   
+  | [autoInvitation.accepted](#autoInvitation.accepted) | 自动邀请接收事件 |   
+  | [autoInvitation.refused](#autoInvitation.refused) | 自动邀请被拒绝事件 |  
 
+
+## Service Broker 结构
+
+### MessageType
+
+ |MessageType Name | Validation  | 
+  | - | :-: |
+  | JsonType | None |
+
+
+### Contract
+
+ |Contract Name | Send by  | 
+  | - | :-:|
+  | GeneralContract | Any |
+
+### Event Service And Queue Relationship
+
+
+  | Send Service  Name  | Send Service Binding Queue | Recive Service Name |Recive Service  Binding Queue |Event Name|
+  | - | :-: | :-: | :-: |:-: |
+  | Chat.Queued.SendService| Chat.Queued.SendQueue |Persistence.ReciveService|PersistenceQueue|[chat.queued](#chat.queued)|
+  | Chat.Started.SendService| Chat.Started.SendQueue |WebHook.ReciveService|WebHookQueue|[chat.started](#chat.started)|
+  | Chat.Ended.SendService| Chat.Ended.SendQueue |Chat.Ended.ReciveService|Chat.Ended.ReciveQueue|[chat.ended](#chat.ended)|
+  | Chat.Wrapup.Submitted.SendService| Chat.Wrapup.Submitted.SendQueue |Persistence.ReciveService|PersistenceQueue|[chat.wrapup.submitted](#chat.wrapup.submitted)|
+  | Chat.Rating.Submitted.SendService| Chat.Rating.Submitted.SendQueue |Persistence.ReciveService|PersistenceQueue|[chat.rating.submitted](#chat.rating.submitted)|
+  | Visitor.Landed.Submitted.SendService| Visitor.Landed.Submitted.SendQueue |Persistence.ReciveService|PersistenceQueue|[visitor.landed](#visitor.landed)|
+  | Visitor.Conversion.Achieved.SendService| Visitor.Conversion.Achieved.SendQueue |Persistence.ReciveService|PersistenceQueue|[visitor.conversion.achieved](#visitor.conversion.achieved)|
+  | Ban.Added.SendService| Ban.Added.SendQueue |Persistence.ReciveService|PersistenceQueue|[ban.added](#ban.added)|
+  | OfflineMessage.Submitted.SendService| OfflineMessage.Submitted.SendQueue |OfflineMessage.Submitted.ReciveService|OfflineMessage.Submitted.ReciveQueue|[offlineMessage.submitted](#offlineMessage.submitted)|
+  | Agent.Status.Changed.SendService| Agent.Status.Changed.SendQueue |Persistence.ReciveService|PersistenceQueue|[agent.status.changed](#agent.status.changed)|
+  | Agent.Preference.Changed.SendService| Agent.Preference.Changed.SendQueue |Persistence.ReciveService|PersistenceQueue|[agent.preference.changed](#agent.preference.changed)|
+  | AgentChat.Replied.SendService| AgentChat.Replied.SendQueue |Persistence.ReciveService|PersistenceQueue|[agentChat.replied](#agentChat.replied)|
+  | CannedMessage.Used.SendService| CannedMessage.Used.SendQueue |Persistence.ReciveService|PersistenceQueue|[cannedMessage.used](#cannedMessage.used)|
+  | AutoInvitation.Sent.SendService| AutoInvitation.Sent.SendQueue |Persistence.ReciveService|PersistenceQueue|[autoInvitation.sent](#autoInvitation.sent)|
+  | AutoInvitation.Accepted.SendService| AutoInvitation.Accepted.SendQueue |Persistence.ReciveService|PersistenceQueue|[autoInvitation.accepted](#autoInvitation.accepted)|
+  | AutoInvitation.Refused.SendService| AutoInvitation.Refused.SendQueue |Persistence.ReciveService|PersistenceQueue|[autoInvitation.refused](#autoInvitation.refused)|
+
+
+### Distributor Service And Queue  Relationship
+
+  | Send Service  Name  | Send Service Binding Queue | Recive Service Name |Recive Service  Binding Queue |
+  | - | :-: | :-: | :-: |
+  | Persistence.SendService| Persistence.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  | Email.SendService| Email.SendQueue |Email.ReciveService|EmailQueue|
+  | Ticket.SendService| Ticket.SendQueue |Ticket.ReciveService|TicketQueue|
+  | Salesforce.SendService| Salesforce.SendQueue |Salesforce.ReciveService|SalesforceQueue|
+  | Zendesk.SendService| Zendesk.SendQueue |Zendesk.ReciveService|ZendeskQueue|
+  | MobilePush.SendService| MobilePush.SendQueue |MobilePush.ReciveService|MobilePushQueue|
+  | WebHook.SendService| WebHook.SendQueue |WebHook.ReciveService|WebHookQueue|
   
-###  Chat.Ended
 
-#### Queue
-1. Chat.Ended.Persistence
-2. Chat.Ended.Email
-3. Chat.Ended.Ticket
-4. Chat.Ended.Webhook
-5. Chat.Ended.Salesforce
-6. Chat.Ended.Zendesk
+###  Consume Queues
 
+  | Queue  Name  | description |
+  | - | :-: | 
+  | PersistenceQueue| 持久化队列 |
+  | EmailQueue| 邮件队列 |
+  | TicketQueue| 工单队列 |
+  | SalesforceQueue| salesforce 队列 |
+  | ZendeskQueue| zendesk 队列  |
+  | WebHookQueue|  WebHook队列  |
+
+###  Error Service And Queue
+
+  | Send Service  Name  | Send Service Binding Queue | Recive Service Name |Recive Service  Binding Queue |Event Name |
+  | - | :-: | :-: | :-: |:-: |
+  | Error.SendService| Error.SendQueue |Error.ReciveService|ErrorQueue|Error|
+
+
+## t_chatserver_event
+
+| Column  Name  | Type | Nullable |Default |Version |Primary key|Remark|
+  | - | :-: | :-: | :-: |:-: |:-: |:-: |
+  | Id| int |no||1.0|true|事件id|
+  | Name| nvarchar(256) |no|''|1.0|false|事件名称|
+  | SendServiceName| nvarchar(256) |no|''|1.0|false|发送服务名称|
+  | SendQueueName| nvarchar(256) |no|''|1.0|false|发送队列名称|
+  | ReciveServiceName| nvarchar(256) |no|''|1.0|false|接收服务名称|
+  | ReciveQueueName| nvarchar(256) |no|''|1.0|false|接收队列名称|
+
+
+## t_chatserver_queue
+
+| Column  Name  | Type | Nullable |Default |Version |Primary key|Remark|
+  | - | :-: | :-: | :-: |:-: |:-: |:-: |
+  | EventId| int |no||1.0|false|t_chatserver_event.id 外键|
+  | Name| nvarchar(256) |no|''|1.0|false|队列名称|
+
+
+
+## Event Produce  And Consume
+  ![imq](mqinterface.png)
+
+
+### Produce
+```c# 
+ 
+public class QueueData
+{
+
+  public int Type{get;set;} //1.chat.queued 2.chat.started 3.chat.visitor.replied 4.chat.agent.replied 5.chat.ended 6.chat.wrapup.submitted 7. chat.rating.submitted 8.visitor.landed 9.visitor.conversion.achieved 10.ban.added 11.offlineMessage.submitted 12.agent.status.changed 13.agent.preference.changed 14.agentChat.replied 15.cannedMessage.used 16.autoInvitation.sent 17.autoInvitation.accepted 18.autoInvitation.accepted
+
+ public object Data{get;set;}
+
+}
+
+
+public class EventProducer
+{
+     
+    public bool ChatEnd(Chat chat)
+    {
+   
+      IEventContext context=  EventFactory.Open();
+      QueueData queueData=new QueueData();
+      queueData.Data=chat;
+      string data=SerializeObject(queueData);
+      return  context.Put(data);
+    }
+   
+   public bool OfflineMessage(OfflineMessage offlineMessage)
+   {
+      IEventContext context=  EventFactory.Open();
+       QueueData queueData=new QueueData();
+       queueData.Type==11;
+      queueData.Data=offlineMessage;
+      string data=SerializeObject(queueData);
+      return  context.Put("chat.ended",data);
+
+   }
+   ...
+   ...
+    string   SerializeObject(object data)
+    {
+
+       return    JsonConvert.SerializeObject(chat);   
+    }   
+
+}
+
+
+```
+ 
+
+
+###  Consumer
+ 
+消费
+```c# 
+  
+
+void PersistenceConsumer()
+{
+
+  while(true)
+  {
+       IEventContext context=  EventFactory.Open();
+       try
+       {
+       string data= context.Get("PersistenceQueue");
+       if(string.isnullorempty(data))continue;
+       QueueData queueData=SerializeObject( data);
+       switch(queueData.Type)
+       {
+         ...
+         case EventType.OfflineMessage:
+         //持久化offlinemessage
+         break;
+         ...
+       }
+       if(数据格式及内容校验==false)
+       {
+         //添加到错误队列中
+          context.Put("Error",data);
+          context.Confirm();
+          continue;
+       }
+         
+        ... 
+        //完成持久化操作
+        ...
+        context.Confirm();
+       } 
+       catch(exception ex)
+       {
+          context.Roolback();
+       }
+  }
+     
+}
+
+QueueData SerializeObject(string data)
+{
+
+    return    JsonConvert.SerializeObject(chat);   
+}   
+
+
+```
+
+
+
+## Event Details
+
+
+###  chat.queued
+#### Target Queue
+  PersistenceQueue
 
 #### Data Struct
+
+```c#
+    
+public class ChatQueueLogs
+{
+ 
+  public int SiteId{get;set;}
+  public List<ChatQueueLog> Messages{get;set;}
+   
+}
+
+
+public class ChatQueueLog
+{
+
+  public int DepartmentId{get;set;}
+  public int NumberOfQueue{get;set;}
+  public DateTime LogTime{get;set;}
+  
+}
+ 
+```
+
+
+
+###  chat.started
+#### Target Queue
+WebHookQueue
+#### Data Struct
+
+
+
+###  chat.visitor.replied
+#### Target Queue
+ 
+#### Data Struct
+
+
+
+###  chat.agent.replied
+#### Target Queue
+ 
+#### Data Struct
+
+
+###  chat.ended
+#### Target Queue
+1. PersistenceQueue
+2. EmailQueue
+3. TicketQueue
+4. SalesforceQueue
+5. ZendeskQueue
+6. WebHookQueue 
+#### Data Struct
+
 ```c#
     public class Chat
     {
@@ -75,7 +328,7 @@
       public string PreChatDepartmentName{get;set;}
       
       public string AgentComment{get;set;}
-      public string content{get;set;}
+      public List<ChatMessage> Messages{get;set;}
       public int SocialMediaSource{get;set;}//0 None,1 Facebook,2 GooglePlus
       public string SocialMediaSource{get;set;}
       public string SocialProfileUrl{get;set;}
@@ -86,8 +339,6 @@
       public int  MissedChatStatus{get;set;} //0 Normal,1  AgentRefused,2 Missed,3 OfflineMessage
       public DateTime RequestTime{get;set;}
       public bool IfEnterQueue{get;set;}
-      public int VisitorMessageNum{get;set;}
-      public int AgentMessageNum{get;set;}
       public double AgentAvgResponseTime{get;set;}
       public int LasMessageSendBy{get;set;}// -1 unknow ,0 visitor ,1 agent,2 system 
       public bool IfNewTicket{get;set;}
@@ -108,6 +359,20 @@
       public List<BotAction> BotActions{get;set;}
    
     }
+
+
+   public class ChatMessage
+   {
+      public int Id{get;set;}
+      public int ChatAction{get;set;}
+      public int SenderType{get;set;} //0 visitor ,1 agent,2 system,3 chatbot
+      public string SenderName{get;set;}
+      public string Message{get;set;}
+      public string translatedMessage{get;set;}
+      public string Attachement{get;set;}
+      public DateTime Time{get;set;}
+
+   }
 
     public class Visitor
     {
@@ -189,19 +454,140 @@
 
 ```
 
-
-###  OfflineMessage.Submit 
-
+###  chat.wrapup.submitted
 #### Queue
-1. OfflineMessage.Submit.Persistence
-2. OfflineMessage.Submit.Email
-3. OfflineMessage.Submit.Ticket
-4. OfflineMessage.Submit.Webhook
-5. OfflineMessage.Submit.Salesforce
-6. OfflineMessage.Submit.Zendesk
-
-
+ PersistenceQueue
 #### Data Struct
+
+```c#
+    
+public class Wrapup
+{
+ 
+  public int SiteId{get;set;}
+  public int AgentId{get;set;}
+  public int ChatId{get;set;}
+  public int CategoryId{get;set;}
+  public List<int> CategoryList{get;set;}
+  public string Comment{get;set;}
+  public DateTime SubmitTime{get;set;}
+  public List<CustomField> CustomFields{get;set;}
+
+}
+ 
+```
+
+
+###  chat.rating.submitted
+#### Queue
+ PersistenceQueue
+#### Data Struct
+
+```c#
+    
+public class Rating
+{
+  public int SiteId{get;set;}
+  public int ChatId{get;set;}
+  public string ChatGuid{get;set;}
+  public int ratingGrade{get;set;}
+  public string ratingComment{get;set;}
+  public List<CustomField> CustomFields{get;set;}
+  public List<CustomVariable> CustomVariables{get;set;}
+}
+ 
+```
+
+###  visitor.landed
+#### Queue
+ PersistenceQueue
+#### Data Struct
+
+```c#
+public class VisitLog
+{
+  public int SiteId{get;set;}
+  public int CampainId{get;set;}
+  public int VisitCount{get;set;}
+
+}
+ 
+```
+
+
+###  visitor.conversion.achieved
+#### Queue
+ PersistenceQueue
+#### Data Struct
+
+```c#
+public class ConversionLogs
+{
+
+  public int SiteId{get;set;}
+  public List<ConversionLog> Logs{get;set;}
+}
+
+
+public class ConversionLog
+{
+
+ 
+ public int Id {get;set;}
+  public int ConversionId{get;set;}
+  public string ConversionName{get;set;}
+  public long VisitorId{get;set;}
+  public long CookIdenitityId{get;set;}
+  public int ChatId{get;set;}
+  public int DepartmentId{get;set;}
+  public int RelatedOperatorId{get;set;}
+  public string AppendInfo{get;set;}
+  public double ConversionValue{get;set;}
+  public DateTime CreateTime{get;set;}
+  publ ic bool HasAddToDatabase{get;set;}
+  public int CurrentChatId{get;set;}
+  public int CurrentDepartmentId{get;set;}
+  public int ConversionAccelerateType{get;set;}//0 firstChat 1 lastChat
+
+}
+ 
+```
+
+### ban.added
+#### Queue
+ PersistenceQueue
+#### Data Struct
+
+```c#
+public class Ban
+{
+
+  public int SiteId{get;set;}
+  public int  AgentId{get;set;}
+  public int BanType{get;set;}//0 visitorId ,1 ip, 2 iparrange
+  public long IpFromOrVisitorId{get;set;}
+  public long IpTo{get;set;}
+  public string Comment{get;set;}
+  public int OperatorId{get;set;}
+}
+
+
+ 
+ 
+```
+
+
+
+###  offlineMessage.submitted
+#### Queue
+1. PersistenceQueue
+2. EmailQueue
+3. TicketQueue
+4. SalesforceQueue
+5. ZendeskQueue
+6. WebHookQueue 
+#### Data Struct
+
 ```c#
  public class OfflineMessage
  {
@@ -235,97 +621,65 @@
     public string Title{get;set;}
     public string Content{get;set;}
  }
-
- 
-
 ```
 
-
-
-###  Visitor.Rating  
-
+###  agent.status.changed
 #### Queue
-Visitor.Rating
-
+ PersistenceQueue
 #### Data Struct
+
 ```c#
     
-public class Rating
-{
-  public int SiteId{get;set;}
-  public int ChatId{get;set;}
-  public string ChatGuid{get;set;}
-  public int ratingGrade{get;set;}
-  public string ratingComment{get;set;}
-  public List<CustomField> CustomFields{get;set;}
-  public List<CustomVariable> CustomVariables{get;set;}
-}
- 
-```
-
-
-
-
-
-
-###  Agent.Wrapup  
-
-
-#### Queue
-Agent.Wrapup
-
-#### Data Struct
-```c#
-    
-public class Wrapup
+public class AgentStatusLog
 {
  
   public int SiteId{get;set;}
   public int AgentId{get;set;}
-  public int ChatId{get;set;}
-  public int CategoryId{get;set;}
-  public List<int> CategoryList{get;set;}
-  public string Comment{get;set;}
-  public DateTime SubmitTime{get;set;}
-  public List<CustomField> CustomFields{get;set;}
-
-}
- 
-```
-
-
-
-
-###  CannedMessage.UseLog  
-
-#### Queue
-CannedMessage.UseLog
-
-
-#### Data Struct
-```c#
-    
-public class CannedMessage
-{
- 
-  public int SiteId{get;set;}
-  public int ChatId{get;set;}
-  public int AgentId{get;set;}
-  public int CannedMessgeId{get;set;}
+  public int Stauts{get;set;}
   public DateTime Time{get;set;}
-   
+}
+
+ 
+ 
+```
+
+
+###  agent.preference.changed
+#### Queue
+PersistenceQueue
+#### Data Struct
+
+```c#
+public class SavePreference
+{
+
+  public int SiteId{get;set;}
+  public int  AgentId{get;set;}
+  public List<Column> Columns{get;set;}
+}
+
+
+public class Column
+{
+   public int EnumColumn{get;set;}
+   public bool IfVisible{get;set;}
+   public int Width{get;set;}
+   public int CustomVariableId{get;set;}
 }
 
  
 ```
 
-###  PrivateMessage.Log  
 
+
+
+
+### agentChat.replied
 #### Queue
-PrivateMessage.Log
-
-
+PersistenceQueue
 #### Data Struct
+
+
 ```c#
     
 public class PrivateMessageLogs
@@ -351,69 +705,33 @@ public class PrivateMessageLog
 
 
 
-###  ChatQueue.Log  
-
+###  cannedMessage.used
 #### Queue
-ChatQueue.Log
-
-
+PersistenceQueue
 #### Data Struct
+
 ```c#
     
-public class ChatQueueLogs
+public class CannedMessage
 {
  
   public int SiteId{get;set;}
-  public List<ChatQueueLog> Messages{get;set;}
+  public int ChatId{get;set;}
+  public int AgentId{get;set;}
+  public int CannedMessgeId{get;set;}
+  public DateTime Time{get;set;}
    
 }
 
-
-public class ChatQueueLog
-{
-
-  public int DepartmentId{get;set;}
-  public int NumberOfQueue{get;set;}
-  public DateTime LogTime{get;set;}
-  
-}
  
 ```
 
 
-
-###  AgentStatus.Log  
-
+###  autoInvitation.sent
 #### Queue
-AgentStatus.Log
-
-
+PersistenceQueue
 #### Data Struct
-```c#
-    
-public class AgentStatusLog
-{
- 
-  public int SiteId{get;set;}
-  public int AgentId{get;set;}
-  public int Stauts{get;set;}
-  public DateTime Time{get;set;}
-}
 
- 
- 
-```
-
-
-
-
-###  AutoInvitation.Log  
-
-#### Queue
-AutoInvitation.Log
-
-
-#### Data Struct
 ```c#
     
 public class AutoInvitationLogs
@@ -441,11 +759,73 @@ public class AutoInvitationLog
 ```
 
 
+###  autoInvitation.accepted
+#### Queue
+PersistenceQueue
+#### Data Struct
+
+```c#
+    
+public class AutoInvitationLogs
+{
+  public int SiteId{get;set;}
+  public List<AutoInvitationLog> Logs{get;set;}
+
+}
+
+    
+public class AutoInvitationLog
+{
+ 
+ 
+  public int CampainId{get;set;}
+  public int InvitaionId{get;set;}
+  public int SetNumber{get;set;}
+  public int AcceptNumber{get;set;}
+  public int RefuseNumber{get;set;}
+  public DateTime Time{get;set;}
+ 
+}
+
+
+```
+
+
+###  autoInvitation.refused
+#### Queue
+PersistenceQueue
+#### Data Struct
+
+```c#
+    
+public class AutoInvitationLogs
+{
+  public int SiteId{get;set;}
+  public List<AutoInvitationLog> Logs{get;set;}
+
+}
+
+    
+public class AutoInvitationLog
+{
+ 
+ 
+  public int CampainId{get;set;}
+  public int InvitaionId{get;set;}
+  public int SetNumber{get;set;}
+  public int AcceptNumber{get;set;}
+  public int RefuseNumber{get;set;}
+  public DateTime Time{get;set;}
+ 
+}
+
+
+```
 
 ###  ManualInvitation.Log
 
 #### Queue
-ManualInvitation.Log
+PersistenceQueue
 
 
 #### Data Struct
@@ -475,134 +855,7 @@ public class  ManualInvitationLog
 }
 ```
 
-
-
-
-###  Visit.Log
-
-#### Queue
-Visit.Log
-
-
-#### Data Struct
-```c#
-    public class VisitLog
-    {
-     public int SiteId{get;set;}
-     public int CampainId{get;set;}
-     public int VisitCount{get;set;}
-
-    }
  
-```
-
-
-
-
-###  Conversion.Log 
-
-#### Queue
-Conversion.Log
-
-
-#### Data Struct
-```c#
-public class ConversionLogs
-{
-
-  public int SiteId{get;set;}
-  public List<ConversionLog> Logs{get;set;}
-}
-
-
-public class ConversionLog
-{
-
- 
- public int Id {get;set;}
-  public int ConversionId{get;set;}
-  public string ConversionName{get;set;}
-  public long VisitorId{get;set;}
-  public long CookIdenitityId{get;set;}
-  public int ChatId{get;set;}
-  public int DepartmentId{get;set;}
-  public int RelatedOperatorId{get;set;}
-  public string AppendInfo{get;set;}
-  public double ConversionValue{get;set;}
-  public DateTime CreateTime{get;set;}
-  public bool HasAddToDatabase{get;set;}
-  public int CurrentChatId{get;set;}
-  public int CurrentDepartmentId{get;set;}
-  public int ConversionAccelerateType{get;set;}//0 firstChat 1 lastChat
-
-}
- 
-```
-
-
-
-
-
-
-###  Agent.SavePreference
-
-#### Queue
-Agent.SavePreference
-
-
-#### Data Struct
-```c#
-public class SavePreference
-{
-
-  public int SiteId{get;set;}
-  public int  AgentId{get;set;}
-  public List<Column> Columns{get;set;}
-}
-
-
-public class Column
-{
-   public int EnumColumn{get;set;}
-   public bool IfVisible{get;set;}
-   public int Width{get;set;}
-   public int CustomVariableId{get;set;}
-}
-
- 
-```
-
-
-
-
-
-###  Agent.Ban 
-
-#### Queue
-Agent.Ban
-
-
-#### Data Struct
-```c#
-public class Ban
-{
-
-  public int SiteId{get;set;}
-  public int  AgentId{get;set;}
-  public int BanType{get;set;}//0 visitorId ,1 ip, 2 iparrange
-  public long IpFromOrVisitorId{get;set;}
-  public long IpTo{get;set;}
-  public string Comment{get;set;}
-  public int OperatorId{get;set;}
-}
-
-
- 
- 
-```
-
-
-
 
 
 
@@ -623,6 +876,40 @@ public class CustomVariable
    public string Name{get;set;}
    public string value{get;set;}
    public string url{get;set;}
+}
+
+public class QueueData
+{
+
+  public EventType Type{get;set;} //1.chat.queued 2.chat.started 3.chat.visitor.replied 4.chat.agent.replied 5.chat.ended 6.chat.wrapup.submitted 7. chat.rating.submitted 8.visitor.landed 9.visitor.conversion.achieved 10.ban.added 11.offlineMessage.submitted 12.agent.status.changed 13.agent.preference.changed 14.agentChat.replied 15.cannedMessage.used 16.autoInvitation.sent 17.autoInvitation.accepted 18.autoInvitation.accepted
+
+ public object Data{get;set;}
+
+
+}
+
+public enum EventType
+{
+none=0,
+chat.queued =1,
+chat.started=2 ,
+chat.visitor.replied=3 ,
+chat.agent.replied =4,
+chat.ended =5,
+chat.wrapup.submitted=6 ,
+chat.rating.submitted =7,
+visitor.landed =8,
+visitor.conversion.achieved =9,
+ban.added =10,
+offlineMessage.submitted=11,
+agent.status.changed =12,
+agent.preference.changed=13 ,
+agentChat.replied =14,
+cannedMessage.used =15,
+autoInvitation.sent=16 ,
+autoInvitation.accepted=17 ,
+autoInvitation.accepted=18
+   
 }
 
 
