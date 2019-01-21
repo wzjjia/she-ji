@@ -64,7 +64,7 @@
 
 
   |Event Name| Send Service  Name  | Send Service Binding Queue | Recive Service Name |Recive Service  Binding Queue |
-  | - | - | - | :-: | :-: | :-: |
+  | - | - | :-: | :-: | :-: |
   |[chat.queued](#chat.queued)| Chat.Queued.SendService| Chat.Queued.SendQueue |Persistence.ReciveService|PersistenceQueue|
   |[chat.started](#chat.started)| Chat.Started.SendService| Chat.Started.SendQueue |WebHook.ReciveService|WebHookQueue|
   |[chat.ended](#chat.ended)| Chat.Ended.SendService| Chat.Ended.SendQueue |Chat.Ended.ReciveService|Chat.Ended.ReciveQueue|
