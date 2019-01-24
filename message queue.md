@@ -618,10 +618,12 @@ public class Ban
     public byte[] AttachmentContent{get;set;}
     public List<CustomField> CustomFields{get;set;}
     public List<CustomVariable> CustomVariables{get;set;}
-    public bool IfEnableIntegration{get;set;}
     public string Title{get;set;}
     public string Content{get;set;}
  }
+
+
+ 
 ```
 
 ###  agent.status.changed
