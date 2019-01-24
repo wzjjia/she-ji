@@ -112,7 +112,7 @@
   | - | :-: | :-: | :-: |:-: |
   | Error.SendService| Error.SendQueue |Error.ReciveService|ErrorQueue|Error|
 
-### Event And Queue Relationship Talbe
+### Event And Queue Relationship Table
 
 #### t_chatserver_event
 
