@@ -92,7 +92,6 @@
   | Ticket.SendService| Ticket.SendQueue |Ticket.ReciveService|TicketQueue|
   | Salesforce.SendService| Salesforce.SendQueue |Salesforce.ReciveService|SalesforceQueue|
   | Zendesk.SendService| Zendesk.SendQueue |Zendesk.ReciveService|ZendeskQueue|
-  | MobilePush.SendService| MobilePush.SendQueue |MobilePush.ReciveService|MobilePushQueue|
   | WebHook.SendService| WebHook.SendQueue |WebHook.ReciveService|WebHookQueue|
   
 
