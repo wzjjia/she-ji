@@ -192,7 +192,9 @@ public class EventProducer
 
 
 ###  Consumer
- 
+
+所有具体消费者请先实现Consumer抽象类，再加入到Initialize 方法中来。
+
 消费
 ```c# 
   
