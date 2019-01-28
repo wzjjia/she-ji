@@ -204,7 +204,9 @@ public class EventProducer
  public void  Initialize()//消费者初始化，在程序启动的时候调用一次即可
  {
     
-   emailConsumer =new EmailConsumer(5);//5 为消费该queue开启的线程数
+  int emailThreadCount = 0;
+  int.TryParse(ConfigurationManager.AppSettings["EmailThreadCount"].ToString(),out emailThreadCount);
+   emailConsumer =new EmailConsumer(emailThreadCount);//emailThreadCount 为消费该queue开启的线程数，
    emailConsumer.Start();
    ...  //其他消费者 请先实现Consumer 
    ...
