@@ -224,21 +224,22 @@ public abstract class Consumer
       {
           this.threadCount = threadCount;
           this.threads = new List<Thread>();
-          this.excute();
+           
       }
 
 
-    private void excute()
+    private void Start()
     {
       for (int i = 0; i < ThreadCount; i++)
       {
-        Thread newThread = new Thread(Start);
+        Thread newThread = new Thread(Consume);
         newThread.IsBackground = true;
         newThread.Start();
         threads.Add(newThread);
       }
     }
-    public abstract void Start();
+    public abstract void Consume();
+    
 
     public void End()
     {
@@ -265,7 +266,7 @@ public class EmailConsumer: Consumer
 
   }
 
-  public override void Start()
+  public override void Consume()
   {
       while(true)
         {
