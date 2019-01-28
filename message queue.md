@@ -83,7 +83,7 @@
   |[autoInvitation.refused](#autoInvitation.refused)| AutoInvitation.Refused.SendService| AutoInvitation.Refused.SendQueue |Persistence.ReciveService|PersistenceQueue|
 
 
-### Distributor Service And Queue  Relationship
+### Consume Queue Service 
 
   | Send Service  Name  | Send Service Binding Queue | Recive Service Name |Recive Service  Binding Queue |
   | - | :-: | :-: | :-: |
@@ -197,52 +197,121 @@ public class EventProducer
 ```c# 
   
 
-void PersistenceConsumer()
-{
+ static EmailConsumer email=null;
+ ....
+ public void  Initialize()//消费者初始化，在程序启动的时候调用一次即可
+ {
+    
+   emailConsumer =new EmailConsumer(5);//5 为消费该queue开启的线程数
+   emailConsumer.Start();
+   ...  //其他消费者 请先实现Consumer 
+   ...
 
-  while(true)
+ }
+
+
+
+public abstract class Consumer
   {
-       IEventContext context=  EventFactory.Open();
-       try
-       {
-       string data= context.Get("PersistenceQueue");
-       if(string.isnullorempty(data))continue;
-       QueueData queueData=SerializeObject( data);
-       switch(queueData.Type)
-       {
-         ...
-         case EventType.offlineMessageSubmitted:
-         //持久化offlinemessage
-         break;
-         ...
-       }
-       if(数据格式及内容校验==false)
-       {
-         //添加到错误队列中
-          context.Put("Error",data);
-          context.Confirm();
-          continue;
-       }
-         
-        ... 
-        //完成持久化操作
-        ...
-        context.Confirm();
-       } 
-       catch(exception ex)
-       {
-          context.Roolback();
-       }
-  }
-     
-}
+    private List<Thread> threads;
+    private int threadCount;
+    protected int ThreadCount { get { return threadCount; } set { threadCount = value; } }
+    public Consumer(int threadCount)
+      {
+          this.threadCount = threadCount;
+          this.threads = new List<Thread>();
+          this.excute();
+      }
 
-QueueData SerializeObject(string data)
-{
+
+    private void excute()
+    {
+      for (int i = 0; i < ThreadCount; i++)
+      {
+        Thread newThread = new Thread(Start);
+        newThread.IsBackground = true;
+        newThread.Start();
+        threads.Add(newThread);
+      }
+    }
+    public abstract void Start();
+
+    public void End()
+    {
+        foreach (Thread thread in threads)
+        {
+            thread.Abort();
+        }
+    }
+
+    protected  QueueData SerializeObject(string data)
+    {
 
     return    JsonConvert.SerializeObject(chat);   
-}   
+    }   
 
+  }
+
+
+public class EmailConsumer: Consumer
+{
+
+  public EmailConsumer(int threadCount) : base(threadCount)
+  {
+
+  }
+
+  public override void Start()
+  {
+      while(true)
+        {
+          IEventContext context=  EventFactory.Open();
+          try
+          {
+          string data= context.Get("EmailQueue");
+          if(string.isnullorempty(data))continue;
+          QueueData queueData=SerializeObject(data);
+          if(queueData==null)
+          {
+            //添加到错误队列中
+            context.Put("Error",data);
+            context.Confirm();
+            continue;
+          }
+          switch(queueData.Type)
+          {
+            ...
+            case EventType.offlineMessageSubmitted:
+                  if(queueData.Data数据格式及内容校验==false)
+                  {
+                  //添加到错误队列中
+                  context.Put("Error",data);
+                  context.Confirm();
+                  continue;
+                  }
+              //发邮件代码
+              ...
+             Thread.Sleep(50);
+            break;
+            ...
+          }
+          
+            
+          ... 
+          //完成持久化操作
+          ...
+          context.Confirm();
+          } 
+          catch(exception ex)
+          {
+            context.Roolback();
+          }
+          }
+  
+  }
+
+  
+}
 
 ```
 
