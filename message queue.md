@@ -228,7 +228,7 @@ public abstract class Consumer
       }
 
 
-    private void Start()
+    public void Start()
     {
       for (int i = 0; i < ThreadCount; i++)
       {
