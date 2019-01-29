@@ -138,9 +138,31 @@
 ## Event Produce  And Consume
   ![imq](mqinterface.png)
 
+### Initialize 
+
+应用程序启动时，初始化 EventFactory 配置,EventFactory 内部实现，将自动心跳检查配置的服务器状态，自动切换服务器。
+
+```c# 
+
+
+public void Initialize()
+{
+   ServerConfig serverConfig=new ServerConfig();
+   serverConfig.Servers.Add(new Server(){Ip=xxx,port=xxx,name=Master,Password=xxx,IsMaster=true,IsActive=true});//添加Server broker主服务器
+     serverConfig.Servers.Add(new Server(){Ip=xxx,port=xxx,name=Slave,Password=xxx,IsMaster=true,IsActive=true});//添加Server broker副服务器
+   EventFactory.Initialize(serverConfig);
+
+}
+ 
+
+```
+
+
 
 ### Produce
+
 ```c# 
+
  
 public class QueueData
 {
@@ -193,126 +215,208 @@ public class EventProducer
 
 ###  Consumer
 
-所有具体消费者请先实现Consumer抽象类，再加入到Initialize 方法中来。
-
-消费
+  ![imq](consume.png)
 ```c# 
   
 
- static EmailConsumer email=null;
- ....
+ 
+ 
  public void  Initialize()//消费者初始化，在程序启动的时候调用一次即可
  {
     
-  int emailThreadCount = 0;
-  int.TryParse(ConfigurationManager.AppSettings["EmailThreadCount"].ToString(),out emailThreadCount);
-   emailConsumer =new EmailConsumer(emailThreadCount);//emailThreadCount 为消费该queue开启的线程数，
-   emailConsumer.Start();
-   ...  //其他消费者 请先实现Consumer 
-   ...
-
+     int emailThreadHandleCount = 0;
+     int.TryParse(ConfigurationManager.AppSettings["EmailThreadHandleCount"].ToString(),out emailThreadHandleCount);//邮件消费队列，每个线程处理数，实际消费线程数是该值的倍数。
+     ConsumerManager.Run(new EmailConsumer(), emailThreadHandleCount);
+     ...//在此加入其它消费队列实现。
  }
 
-
-
-public abstract class Consumer
-  {
-    private List<Thread> threads;
-    private int threadCount;
-    protected int ThreadCount { get { return threadCount; } set { threadCount = value; } }
-    public Consumer(int threadCount)
-      {
-          this.threadCount = threadCount;
-          this.threads = new List<Thread>();
-           
-      }
-
-
-    public void Start()
+    public class ConsumerManager
     {
-      for (int i = 0; i < ThreadCount; i++)
-      {
-        Thread newThread = new Thread(Consume);
-        newThread.IsBackground = true;
-        newThread.Start();
-        threads.Add(newThread);
-      }
-    }
-    public abstract void Consume();
-    
 
-    public void End()
-    {
-        foreach (Thread thread in threads)
+        private static Dictionary<string, ConsumerWrap> consumers = new Dictionary<string, ConsumerWrap>();
+
+        public static void Run(IConsumer consumer,int everyThreadHandleCount)
         {
-            thread.Abort();
+            if (!consumers.ContainsKey(consumer.QueueName))
+                consumers.Add(consumer.QueueName, new ConsumerWrap(consumer, everyThreadHandleCount));
         }
+
     }
 
-    protected  QueueData SerializeObject(string data)
+
+
+   public class ConsumerWrap
+    {
+        private ConcurrentBag<ConsumerThread> threads;
+        private IConsumer consumer;
+        private int everyThreadHandleCount;
+        private int queueDataCount = 0;
+        private Thread queryCountThread = null;
+        public ConsumerWrap(IConsumer consumer, int everyThreadHandleCount)
+        {
+            this.consumer = consumer;
+            this.everyThreadHandleCount = everyThreadHandleCount;
+            this.threads = new ConcurrentBag<ConsumerThread>();
+            this.UpdateConsumers(everyThreadHandleCount);
+            this.queryCountThread = new Thread(QueryCount);
+            this.queryCountThread.IsBackground = true;
+            this.queryCountThread.Start();
+        }
+
+        private void UpdateConsumers(int queueDataCount)
+        {
+            int threadCount = (int)Math.Ceiling((Decimal)(queueDataCount / everyThreadHandleCount));
+
+            int dif = threadCount - threads.Count;
+            if (dif == 0) return;
+            if (dif > 0)
+            {
+                for (int i = 0; i < dif; i++)
+                {
+                    ConsumerThread consumerThread = new ConsumerThread(consumer);
+                    consumerThread.IsRunning = true;
+                }
+            }
+            else
+            {
+                dif = System.Math.Abs(dif);
+                for (int i = 0; i < dif; i++)
+                {
+                    ConsumerThread consumerThread = null;
+                    if (threads.TryTake(out consumerThread))
+                        consumerThread.IsRunning = false;
+                }
+
+            }
+        }
+
+        private void QueryCount()
+        {
+            while (true)
+            {
+
+
+                IEventContext context = null;
+                try
+                {
+                    context = EventFactory.Open();
+                    queueDataCount = context.GetCount(consumer.QueueName);
+                    this.UpdateConsumers(queueDataCount);
+                }
+                catch (Exception ex)
+                {
+
+                }
+
+                Thread.Sleep(1000);
+            }
+        }
+
+    }
+
+
+    public class ConsumerThread
     {
 
-    return    JsonConvert.SerializeObject(chat);   
-    }   
+        public IConsumer Consumer { get; set; }
+        private bool isRunning = false;
+        private Thread thread;
+        public bool IsRunning
+        {
+            get { return isRunning; }
+            set
+            {
+                isRunning = value;
+                if (isRunning)
+                {
+                    thread.Start();
+                }
+            }
+        }
 
-  }
+        public ConsumerThread(IConsumer consumer)
+        {
+            this.Consumer = consumer;
+
+            thread = new Thread(excute);
+            thread.IsBackground = true;
+
+        }
+
+        void excute()
+        {
+            while (isRunning)
+            {
+                Consumer.Consume();
+                Thread.Sleep(50);
+            }
+            thread.Abort();
+            thread = null;
+        }
+
+    }
 
 
-public class EmailConsumer: Consumer
+
+public interface IConsumer
+{
+  string QueueName { get; }
+  void Consume();
+
+}
+
+
+public class EmailConsumer: IConsumer
 {
 
-  public EmailConsumer(int threadCount) : base(threadCount)
-  {
+  public string QueueName { get { return "EmailQueue"; } }
+ 
 
-  }
-
-  public override void Consume()
+  public  void Consume()
   {
-      while(true)
-        {
-          IEventContext context=  EventFactory.Open();
-          try
-          {
-          string data= context.Get("EmailQueue");
-          if(string.isnullorempty(data))continue;
-          QueueData queueData=SerializeObject(data);
-          if(queueData==null)
-          {
-            //添加到错误队列中
-            context.Put("Error",data);
-            context.Confirm();
-            continue;
-          }
-          switch(queueData.Type)
-          {
-            ...
-            case EventType.offlineMessageSubmitted:
-                  if(queueData.Data数据格式及内容校验==false)
-                  {
-                  //添加到错误队列中
-                  context.Put("Error",data);
-                  context.Confirm();
-                  continue;
-                  }
-              //发邮件代码
-              ...
-             Thread.Sleep(50);
-            break;
-            ...
-          }
-          
-            
-          ... 
-          //完成持久化操作
+       
+      IEventContext context=  EventFactory.Open();
+      try
+      {
+      string data= context.Get("EmailQueue");
+      if(string.isnullorempty(data))continue;
+      QueueData queueData=SerializeObject(data);
+      if(queueData==null)
+      {
+        //添加到错误队列中
+        context.Put("Error",data);
+        context.Confirm();
+        continue;
+      }
+      switch(queueData.Type)
+      {
+        ...
+        case EventType.offlineMessageSubmitted:
+              if(queueData.Data数据格式及内容校验==false)
+              {
+              //添加到错误队列中
+              context.Put("Error",data);
+              context.Confirm();
+              //记录日志
+              continue;
+              }
+          //发邮件代码
           ...
-          context.Confirm();
-          } 
-          catch(exception ex)
-          {
-            context.Roolback();
-          }
-          }
-  
+          Thread.Sleep(50);
+        break;
+        ...
+      }
+      
+        
+      ... 
+      //完成持久化操作
+      ...
+      context.Confirm();
+      } 
+      catch(exception ex)
+      {
+        context.Roolback();
+      }   
   }
 
   
