@@ -437,18 +437,12 @@ public class EmailConsumer: IConsumer
 
 ```c#
     
-public class ChatQueueLogs
-{
  
-  public int SiteId{get;set;}
-  public List<ChatQueueLog> Messages{get;set;}
-   
-}
-
 
 public class ChatQueueLog
 {
 
+  public int SiteId{get;set;}
   public int DepartmentId{get;set;}
   public int NumberOfQueue{get;set;}
   public DateTime LogTime{get;set;}
