@@ -415,7 +415,7 @@ public class EmailConsumer: IConsumer
       } 
       catch(exception ex)
       {
-        context.Roolback();
+        context.Reject();
       }   
   }
 
@@ -700,18 +700,13 @@ public class VisitLog
 #### Data Struct
 
 ```c#
-public class ConversionLogs
-{
-
-  public int SiteId{get;set;}
-  public List<ConversionLog> Logs{get;set;}
-}
+ 
 
 
 public class ConversionLog
 {
 
- 
+ public int SiteId{get;set;}
  public int Id {get;set;}
   public int ConversionId{get;set;}
   public string ConversionName{get;set;}
@@ -863,18 +858,12 @@ PersistenceQueue
 
 ```c#
     
-public class PrivateMessageLogs
-{
  
-  public int SiteId{get;set;}
-  public List<PrivateMessage> Messages{get;set;}
-   
-}
 
 
 public class PrivateMessageLog
 {
-
+ public int SiteId{get;set;}
   public int FromAgentId{get;set;}
   public int ToAgentId{get;set;}
   public DateTime Time{get;set;}
@@ -914,19 +903,11 @@ PersistenceQueue
 #### Data Struct
 
 ```c#
-    
-public class AutoInvitationLogs
-{
-  public int SiteId{get;set;}
-  public List<AutoInvitationLog> Logs{get;set;}
-
-}
-
-    
+ 
 public class AutoInvitationLog
 {
  
- 
+  public int SiteId{get;set;}
   public int CampainId{get;set;}
   public int InvitaionId{get;set;}
   public int SetNumber{get;set;}
@@ -947,18 +928,13 @@ PersistenceQueue
 
 ```c#
     
-public class AutoInvitationLogs
-{
-  public int SiteId{get;set;}
-  public List<AutoInvitationLog> Logs{get;set;}
-
-}
+ 
 
     
 public class AutoInvitationLog
 {
  
- 
+ public int SiteId{get;set;}
   public int CampainId{get;set;}
   public int InvitaionId{get;set;}
   public int SetNumber{get;set;}
@@ -979,18 +955,13 @@ PersistenceQueue
 
 ```c#
     
-public class AutoInvitationLogs
-{
-  public int SiteId{get;set;}
-  public List<AutoInvitationLog> Logs{get;set;}
-
-}
+ 
 
     
 public class AutoInvitationLog
 {
  
- 
+  public int SiteId{get;set;}
   public int CampainId{get;set;}
   public int InvitaionId{get;set;}
   public int SetNumber{get;set;}
@@ -1012,17 +983,12 @@ PersistenceQueue
 #### Data Struct
 ```c#
     
-public class ManualInvitationLogs
-{
- 
- public int SiteId{get;set;}
- public List<ManualInvitationLog> Logs{get;set;}
- 
-}
+
 
 
 public class  ManualInvitationLog
 {
+public int SiteId{get;set;}
  public int AgentId{get;set;}
 
   public int Status{get;set;} // 0 Miss,1 Accept ,2 Refuse
