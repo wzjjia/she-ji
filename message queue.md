@@ -164,7 +164,7 @@ public void Initialize()
 ```c# 
 
  
-public class QueueData
+public class EventData
 {
 
   public EventType Type{get;set;} 
@@ -181,9 +181,9 @@ public class EventProducer
     {
    
       IEventContext context=  EventFactory.Open();
-      QueueData queueData=new QueueData();
-      queueData.Type=EventType.chatEnded;
-      queueData.Data=chat;
+      EventData data=new EventData();
+      data.Type=EventType.chatEnded;
+      data.Data=chat;
       string data=SerializeObject(queueData);
       return  context.Put(data);
     }
@@ -191,7 +191,7 @@ public class EventProducer
    public bool OfflineMessage(OfflineMessage offlineMessage)
    {
       IEventContext context=  EventFactory.Open();
-       QueueData queueData=new QueueData();
+       EventData data=new EventData();
        queueData.Type=EventType.offlineMessageSubmitted;
       queueData.Data=offlineMessage;
       string data=SerializeObject(queueData);
@@ -1059,7 +1059,7 @@ public class CustomVariable
    public string url{get;set;}
 }
 
-public class QueueData
+public class EventData
 {
 
   public EventType Type{get;set;} //1.chat.queued 2.chat.started 3.chat.visitor.replied 4.chat.agent.replied 5.chat.ended 6.chat.wrapup.submitted 7. chat.rating.submitted 8.visitor.landed 9.visitor.conversion.achieved 10.ban.added 11.offlineMessage.submitted 12.agent.status.changed 13.agent.preference.changed 14.agentChat.replied 15.cannedMessage.used 16.autoInvitation.sent 17.autoInvitation.accepted 18.autoInvitation.accepted
