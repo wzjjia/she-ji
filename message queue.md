@@ -1,4 +1,4 @@
-
+· 
 
 # chat server 异步消息处理
 
@@ -1044,9 +1044,7 @@ autoInvitationAccepted=18
   | MessgeTypeId| int |no||1.0|false|t_queue_message_type.id 外键|
   | Name| nvarchar(256) |no|''|1.0|false|队列名称|
   | SendServiceName| nvarchar(256) |no|''|1.0|false|发送服务名称|
-  | SendQueueName| nvarchar(256) |no|''|1.0|false|发送队列名称|
   | ReciveServiceName| nvarchar(256) |no|''|1.0|false|接收服务名称|
-  | ReciveQueueName| nvarchar(256) |no|''|1.0|false|接收队列名称|
 
 
 ### 创建一个Service Broker 消息队列脚本示例
@@ -1146,3 +1144,153 @@ top(1) 表示 1次 从[Chat.Ended.ReciveQueue] 队列中拿取一条信息 ，ti
  COMMIT TRANSACTION; 
 
 ```
+
+
+
+
+5. 创建一个持久化队列和服务 ，用于接收chat.ended 的数据分发以后的 持久化队列
+
+```sql
+
+CREATE QUEUE   [Persistence.SendQueue];
+CREATE QUEUE  [Persistence.ReciveQueue];
+GO
+
+ 
+CREATE SERVICE  [Persistence.SendService]
+  ON QUEUE [Persistence.SendQueue];
+GO
+
+
+ 
+CREATE SERVICE  [Persistence.ReciveService]
+  ON QUEUE  [Persistence.ReciveQueue]
+    ([GeneralContract]);
+GO
+
+```
+
+
+
+6. 创建一个 分发队列信息的存储过程
+
+```sql
+  
+ 
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[ChatEndedProcedure]
+AS
+BEGIN
+  -- 接收句柄.
+  DECLARE @RecvReqDlgHandle UNIQUEIDENTIFIER;
+  -- 接收到的数据.
+  DECLARE @RecvReqMsg NVARCHAR(100);
+  -- 接收到的数据类型名称.
+  DECLARE @RecvReqMsgName sysname;
+  -- 循环处理.
+  WHILE (1=1)
+  BEGIN
+    -- 开始事务处理.
+    BEGIN TRANSACTION;
+    -- 尝试从 SayHelloReceiveQueue 队列 接收消息.
+    WAITFOR
+    ( RECEIVE TOP(1)
+        @RecvReqDlgHandle = conversation_handle,
+        @RecvReqMsg       = message_body,
+        @RecvReqMsgName   = message_type_name
+      FROM [dbo].[Chat.Ended.ReciveQueue]
+    ), TIMEOUT 5000;
+    -- 判断有没有获取到消息.
+    IF (@@ROWCOUNT = 0)
+    BEGIN
+      -- 如果没有接收到消息
+      -- 回滚事务.
+      ROLLBACK TRANSACTION;
+      -- 跳出循环.
+      BREAK;
+    END
+    
+    BEGIN
+     
+	 DECLARE
+    @SendServiceName AS NVARCHAR(50),
+	@ReciveServiceName AS NVARCHAR(50)
+	;
+
+    
+-- 声明游标
+DECLARE q_names CURSOR FAST_FORWARD FOR
+   select [SendServiceName],[ReciveServiceName]  from [dbo].[t_data_queue] A,[dbo].[t_queue_message_type] b where  a.[MessgeTypeId]=b.id and b.[Name]='chat.ended';
+  
+    
+OPEN q_names;
+
+-- 取第一条记录
+FETCH NEXT FROM q_names INTO @SendServiceName,@ReciveServiceName;
+
+WHILE @@FETCH_STATUS=0
+BEGIN
+    -- 操作
+     DECLARE @InitDlgHandle UNIQUEIDENTIFIER;
+  DECLARE @MyMessage NVARCHAR(100);
+  SET @MyMessage = @RecvReqMsg
+ 
+  BEGIN DIALOG @InitDlgHandle
+    FROM SERVICE  
+      @SendServiceName
+    TO SERVICE   
+     @ReciveServiceName
+    ON CONTRACT   
+      GeneralContract
+    WITH 
+      ENCRYPTION = OFF;
+  SEND ON CONVERSATION @InitDlgHandle
+    MESSAGE TYPE
+      [JsonType]
+        ( @MyMessage );
+  
+    
+    -- 取下一条记录
+    FETCH NEXT FROM q_names INTO  @SendServiceName,@ReciveServiceName;
+END
+
+-- 关闭游标
+CLOSE q_names;
+
+-- 释放游标
+DEALLOCATE q_names;
+
+       -- 发送反馈消息.
+       SEND ON CONVERSATION @RecvReqDlgHandle
+         MESSAGE TYPE
+           [JsonType]
+              ( @RecvReqMsg );
+       END CONVERSATION @RecvReqDlgHandle;
+    END;
+    -- 提交事务.
+    COMMIT TRANSACTION;
+  END
+END
+
+
+
+```
+
+
+7. 队列绑定存储过程
+```sql
+  
+ALTER QUEUE Chat.Ended.ReciveQueue
+  WITH ACTIVATION
+    ( STATUS = ON,
+      PROCEDURE_NAME = ChatEndedProcedure,
+      MAX_QUEUE_READERS = 10, --存储过程实例
+      EXECUTE AS SELF
+    );
+GO
+```
+
+
