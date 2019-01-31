@@ -370,18 +370,7 @@ WebHookQueue
 #### Data Struct
 
 
-
-###  chat.visitor.replied
-#### Target Queue
  
-#### Data Struct
-
-
-
-###  chat.agent.replied
-#### Target Queue
- 
-#### Data Struct
 
 
 ###  chat.ended
