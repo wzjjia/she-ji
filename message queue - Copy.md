@@ -12,133 +12,47 @@
 ## 总体思路
   ![mq](mq.png)
   Chat Server 一些同步的消息处理，将采用 service broker 进行异步解耦, consumer service 及时的消费service broker 中数据，完成后续处理流程。
-  1. 消息处理流程：chat server 推送事件，将事件消息写入 service broker event queue Server 中的事件队列中， 存储过程负责将这些等待处理的事件信息写入到订阅了这些事件信息的 data queue 中（订阅关系配置在第2点中），以供具体的消费者consumer去消费这些数据。
-  2. service broker event queue 和data queue 的关系配置在表 [t_chatserver_event](#t_chatserver_event)和 [t_chatserver_queue](#t_chatserver_queue)中。
-  3. Remote  Service Broker Event Queue Server 为远程事件队列服务器，Main Service Broker Event Queue Server down掉以后事件将会发送到上面，同时也作为副服务器的事件队列服务器。
-  4. Remote  Service Broker Event Queue Server 上的事件数据， 会通过service broker的配置将数据同步到主服务器上的data queue中。
+  1. 消息处理流程：chat server 推送事件，将事件消息写入 service broker message queue Server 中的主消息队列中， 存储过程负责将这些等待处理的事件信息写入到订阅了这些事件信息的子 data queue 中（订阅关系配置在第2点中），以供具体的消费者consumer去消费这些数据。
+  2. service broker 主message  queue 和子data queue 的关系配置在表 [t_queue_message_type](#t_queue_message_type)和 [t_data_queue](#t_data_queue)中。
+  3. Remote  Service Broker Message type Queue Server 为远程事件队列服务器，Main Service Broker Message Queue Server down掉以后事件将会发送到上面，同时也作为副服务器的事件队列服务器。
+  4. Remote  Service Broker message Queue Server 上的事件数据， 会通过service broker的配置将数据同步到主服务器上的data queue中。
   5. 最终consumer service 将会从data queue 中 拿出这些数据，消费掉，完成最后的流程处理。
+  6. Service Broker 将会部署到一个单独的数据中库，专门存放Service Broker的队列信息。
+  7. consumer service 将会部署到单独的web应用程序中。
 
 
 
-## Events
+## Message Type
 
   
  |Message Type |  Description |    
   | - | :-: |
-  | [chat.queued](#chat.queued) |  chat 排队事件|   |
-  | [chat.started](#chat.started) | chat 聊天开始事件  |   
-  | [chat.ended](#chat.ended) | 聊天结束事件 |   
-  | [chat.wrapup.submitted](#chat.wrapup.submitted) |wrapup 提交事件 |   
-  | [chat.rating.submitted](#chat.rating.submitted) | rating 提交事件|   
-  | [visitor.landed](#visitor.landed) |访客登入 |  
-  | [visitor.conversion.achieved](#visitor.conversion.achieved) |有效客户转换事件 |   
-  | [ban.added](#ban.added) | 添加黑名单事件|   
-  | [offlineMessage.submitted](#offlineMessage.submitted) |离线留言事件 |   
-  | [agent.status.changed](#agent.status.changed) | 坐席状态改变事件|   
-  | [agent.preference.changed](#agent.preference.changed) | 坐席个性化设置变更事件|   
-  | [agentChat.replied](#agentChat.replied) |坐席私聊回复事件 |   
-  | [cannedMessage.used](#cannedMessage.used) | 快捷信息使用事件 |   
-  | [autoInvitation.sent](#autoInvitation.sent) | 自动邀请发送事件 |   
-  | [autoInvitation.accepted](#autoInvitation.accepted) | 自动邀请接收事件 |   
-  | [autoInvitation.refused](#autoInvitation.refused) | 自动邀请被拒绝事件 |  
-
-
-## Service Broker 结构
-
-### MessageType
-
- |MessageType Name | Validation  | 
-  | - | :-: |
-  | JsonType | None |
-
-
-### Contract
-
- |Contract Name | Send by  | 
-  | - | :-:|
-  | GeneralContract | Any |
-
-### Event Service And Queue Relationship
-
-
-  |Event Name| Send Service  Name  | Send Service Binding Queue | Recive Service Name |Recive Service  Binding Queue |
-  | - | - | :-: | :-: | :-: |
-  |[chat.queued](#chat.queued)| Chat.Queued.SendService| Chat.Queued.SendQueue |Persistence.ReciveService|PersistenceQueue|
-  |[chat.started](#chat.started)| Chat.Started.SendService| Chat.Started.SendQueue |WebHook.ReciveService|WebHookQueue|
-  |[chat.ended](#chat.ended)| Chat.Ended.SendService| Chat.Ended.SendQueue |Chat.Ended.ReciveService|Chat.Ended.ReciveQueue|
-  |[chat.wrapup.submitted](#chat.wrapup.submitted)| Chat.Wrapup.Submitted.SendService| Chat.Wrapup.Submitted.SendQueue |Persistence.ReciveService|PersistenceQueue|
-  |[chat.rating.submitted](#chat.rating.submitted)| Chat.Rating.Submitted.SendService| Chat.Rating.Submitted.SendQueue |Persistence.ReciveService|PersistenceQueue|
-  |[visitor.landed](#visitor.landed)| Visitor.Landed.Submitted.SendService| Visitor.Landed.Submitted.SendQueue |Persistence.ReciveService|PersistenceQueue|
-  |[visitor.conversion.achieved](#visitor.conversion.achieved)| Visitor.Conversion.Achieved.SendService| Visitor.Conversion.Achieved.SendQueue |Persistence.ReciveService|PersistenceQueue|
-  |[ban.added](#ban.added)| Ban.Added.SendService| Ban.Added.SendQueue |Persistence.ReciveService|PersistenceQueue|
-  |[offlineMessage.submitted](#offlineMessage.submitted)| OfflineMessage.Submitted.SendService| OfflineMessage.Submitted.SendQueue |OfflineMessage.Submitted.ReciveService|OfflineMessage.Submitted.ReciveQueue|
-  |[agent.status.changed](#agent.status.changed)| Agent.Status.Changed.SendService| Agent.Status.Changed.SendQueue |Persistence.ReciveService|PersistenceQueue|
-  |[agent.preference.changed](#agent.preference.changed)| Agent.Preference.Changed.SendService| Agent.Preference.Changed.SendQueue |Persistence.ReciveService|PersistenceQueue|
-  |[agentChat.replied](#agentChat.replied)| AgentChat.Replied.SendService| AgentChat.Replied.SendQueue |Persistence.ReciveService|PersistenceQueue|
-  |[cannedMessage.used](#cannedMessage.used)| CannedMessage.Used.SendService| CannedMessage.Used.SendQueue |Persistence.ReciveService|PersistenceQueue|
-  |[autoInvitation.sent](#autoInvitation.sent)| AutoInvitation.Sent.SendService| AutoInvitation.Sent.SendQueue |Persistence.ReciveService|PersistenceQueue|
-  |[autoInvitation.accepted](#autoInvitation.accepted)| AutoInvitation.Accepted.SendService| AutoInvitation.Accepted.SendQueue |Persistence.ReciveService|PersistenceQueue|
-  |[autoInvitation.refused](#autoInvitation.refused)| AutoInvitation.Refused.SendService| AutoInvitation.Refused.SendQueue |Persistence.ReciveService|PersistenceQueue|
-
-
-### Consume Queue Service 
-
-  | Send Service  Name  | Send Service Binding Queue | Recive Service Name |Recive Service  Binding Queue |
-  | - | :-: | :-: | :-: |
-  | Persistence.SendService| Persistence.SendQueue |Persistence.ReciveService|PersistenceQueue|
-  | Email.SendService| Email.SendQueue |Email.ReciveService|EmailQueue|
-  | Ticket.SendService| Ticket.SendQueue |Ticket.ReciveService|TicketQueue|
-  | Salesforce.SendService| Salesforce.SendQueue |Salesforce.ReciveService|SalesforceQueue|
-  | Zendesk.SendService| Zendesk.SendQueue |Zendesk.ReciveService|ZendeskQueue|
-  | WebHook.SendService| WebHook.SendQueue |WebHook.ReciveService|WebHookQueue|
-  
-
-###  Consume Queues
-
-  | Queue  Name  | description |
-  | - | :-: | 
-  | PersistenceQueue| 持久化队列 |
-  | EmailQueue| 邮件队列 |
-  | TicketQueue| 工单队列 |
-  | SalesforceQueue| salesforce 队列 |
-  | ZendeskQueue| zendesk 队列  |
-  | WebHookQueue|  WebHook队列  |
-
-###  Error Service And Queue
-
-  | Send Service  Name  | Send Service Binding Queue | Recive Service Name |Recive Service  Binding Queue |Event Name |
-  | - | :-: | :-: | :-: |:-: |
-  | Error.SendService| Error.SendQueue |Error.ReciveService|ErrorQueue|Error|
-
-### Event And Queue Relationship Table
-
-#### t_chatserver_event
-
-| Column  Name  | Type | Nullable |Default |Version |Primary key|Remark|
-  | - | :-: | :-: | :-: |:-: |:-: |:-: |
-  | Id| int |no||1.0|true|事件id|
-  | Name| nvarchar(256) |no|''|1.0|false|事件名称|
-
-
-#### t_chatserver_queue
-
-| Column  Name  | Type | Nullable |Default |Version |Primary key|Remark|
-  | - | :-: | :-: | :-: |:-: |:-: |:-: |
-  | EventId| int |no||1.0|false|t_chatserver_event.id 外键|
-  | Name| nvarchar(256) |no|''|1.0|false|队列名称|
-   | SendServiceName| nvarchar(256) |no|''|1.0|false|发送服务名称|
-  | SendQueueName| nvarchar(256) |no|''|1.0|false|发送队列名称|
-  | ReciveServiceName| nvarchar(256) |no|''|1.0|false|接收服务名称|
-  | ReciveQueueName| nvarchar(256) |no|''|1.0|false|接收队列名称|
+  | [chat.queued](#chat.queued) |  chat 排队统计|  5分钟更新一次的部门等待聊天的访客排队数日志 |
+  | [chat.started](#chat.started) |  聊天开始 |   
+  | [chat.ended](#chat.ended) | 聊天结束时需要记录的消息 |   
+  | [chat.wrapup.submitted](#chat.wrapup.submitted) |wrapup 提交的信息 |   
+  | [chat.rating.submitted](#chat.rating.submitted) | rating 提交的信息|   
+  | [visitor.landed](#visitor.landed) |访客登入时提交的信息 |  
+  | [visitor.conversion.achieved](#visitor.conversion.achieved) |发生有效客户转换的记录的信息 |   
+  | [ban.added](#ban.added) | 添加黑名单资料|   
+  | [offlineMessage.submitted](#offlineMessage.submitted) |离线留言消息 |   
+  | [agent.status.changed](#agent.status.changed) | 坐席状态改变消息|   
+  | [agent.preference.changed](#agent.preference.changed) | 坐席个性化设置变更信息|   
+  | [agentChat.replied](#agentChat.replied) |坐席私聊回复信息 |   
+  | [cannedMessage.used](#cannedMessage.used) | 快捷信息使用时记录的日志 |   
+  | [autoInvitation.log](#autoInvitation.log) | 自动邀请时记录的消息日志 |   
+  | [manualInvitation.log](#manualInvitation.log) | 手动邀请时记录的消息日志 |  
 
 
 
-## Event Produce  And Consume
+
+
+## Message Produce  And Consume
   ![imq](mqinterface.png)
 
 ### Initialize 
 
-应用程序启动时，初始化 EventFactory 配置,EventFactory 内部实现，将自动心跳检查配置的服务器状态，自动切换服务器。
+应用程序启动时，初始化 MessageFactory 配置,MessageFactory 内部实现，将自动心跳检查配置的服务器状态，自动切换服务器。
 
 ```c# 
 
@@ -148,7 +62,7 @@ public void Initialize()
    ServerConfig serverConfig=new ServerConfig();
    serverConfig.Servers.Add(new Server(){Ip=xxx,port=xxx,name=Master,Password=xxx,IsMaster=true,IsActive=true});//添加Server broker主服务器
      serverConfig.Servers.Add(new Server(){Ip=xxx,port=xxx,name=Slave,Password=xxx,IsMaster=true,IsActive=true});//添加Server broker副服务器
-   EventFactory.Initialize(serverConfig);
+   MessageFactory.Initialize(serverConfig);
 
 }
  
@@ -162,38 +76,38 @@ public void Initialize()
 ```c# 
 
  
-public class EventData
+public class MessageData
 {
 
-  public EventType Type{get;set;} 
+  public MessageType Type{get;set;} 
 
  public object Data{get;set;}
 
 }
 
 
-public class EventProducer
+public class MessageProducer
 {
      
     public bool ChatEnd(Chat chat)
     {
    
-      IEventContext context=  EventFactory.Open();
-      EventData data=new EventData();
-      data.Type=EventType.chatEnded;
+      IMessageContext context=  MessageFactory.Open();
+      MessageData data=new MessageData();
+      data.Type=MessageType.chatEnded;
       data.Data=chat;
       string data=SerializeObject(queueData);
-      return  context.Put(data);
+      return  context.Put("chat.ended",data);
     }
    
    public bool OfflineMessage(OfflineMessage offlineMessage)
    {
-      IEventContext context=  EventFactory.Open();
-       EventData data=new EventData();
-       queueData.Type=EventType.offlineMessageSubmitted;
+      IMessageContext context=  MessageFactory.Open();
+       MessageData data=new MessageData();
+      queueData.Type=MessageType.offlineMessageSubmitted;
       queueData.Data=offlineMessage;
       string data=SerializeObject(queueData);
-      return  context.Put("chat.ended",data);
+      return  context.Put("offlineMessage.submitted",data);
 
    }
    ...
@@ -294,10 +208,10 @@ public class EventProducer
             {
 
 
-                IEventContext context = null;
+                IMessageContext context = null;
                 try
                 {
-                    context = EventFactory.Open();
+                    context = MessageFactory.Open();
                     queueDataCount = context.GetCount(consumer.QueueName);
                     this.UpdateConsumers(queueDataCount);
                 }
@@ -373,7 +287,7 @@ public class EmailConsumer: IConsumer
   public  void Consume()
   {
        
-      IEventContext context=  EventFactory.Open();
+      IMessageContext context=  MessageFactory.Open();
       try
       {
       string data= context.Get("EmailQueue");
@@ -389,7 +303,7 @@ public class EmailConsumer: IConsumer
       switch(queueData.Type)
       {
         ...
-        case EventType.offlineMessageSubmitted:
+        case MessageType.offlineMessageSubmitted:
               if(queueData.Data数据格式及内容校验==false)
               {
               //添加到错误队列中
@@ -424,7 +338,7 @@ public class EmailConsumer: IConsumer
 
 
 
-## Event Details
+## Message Type Details
 
 
 ###  chat.queued
@@ -435,7 +349,6 @@ public class EmailConsumer: IConsumer
 
 ```c#
     
- 
 
 public class ChatQueueLog
 {
@@ -852,8 +765,6 @@ PersistenceQueue
 
 ```c#
     
- 
-
 
 public class PrivateMessageLog
 {
@@ -891,7 +802,7 @@ public class CannedMessage
 ```
 
 
-###  autoInvitation.sent
+###  autoInvitation.log
 #### Queue
 PersistenceQueue
 #### Data Struct
@@ -922,9 +833,7 @@ PersistenceQueue
 
 ```c#
     
- 
 
-    
 public class AutoInvitationLog
 {
  
@@ -949,8 +858,6 @@ PersistenceQueue
 
 ```c#
     
- 
-
     
 public class AutoInvitationLog
 {
@@ -968,7 +875,7 @@ public class AutoInvitationLog
 
 ```
 
-###  ManualInvitation.Log
+###  manualInvitation.log
 
 #### Queue
 PersistenceQueue
@@ -977,8 +884,6 @@ PersistenceQueue
 #### Data Struct
 ```c#
     
-
-
 
 public class  ManualInvitationLog
 {
@@ -1019,17 +924,17 @@ public class CustomVariable
    public string url{get;set;}
 }
 
-public class EventData
+public class MessageData
 {
 
-  public EventType Type{get;set;} //1.chat.queued 2.chat.started 3.chat.visitor.replied 4.chat.agent.replied 5.chat.ended 6.chat.wrapup.submitted 7. chat.rating.submitted 8.visitor.landed 9.visitor.conversion.achieved 10.ban.added 11.offlineMessage.submitted 12.agent.status.changed 13.agent.preference.changed 14.agentChat.replied 15.cannedMessage.used 16.autoInvitation.sent 17.autoInvitation.accepted 18.autoInvitation.accepted
+  public MessageType Type{get;set;} //1.chat.queued 2.chat.started 3.chat.visitor.replied 4.chat.agent.replied 5.chat.ended 6.chat.wrapup.submitted 7. chat.rating.submitted 8.visitor.landed 9.visitor.conversion.achieved 10.ban.added 11.offlineMessage.submitted 12.agent.status.changed 13.agent.preference.changed 14.agentChat.replied 15.cannedMessage.used 16.autoInvitation.sent 17.autoInvitation.accepted 18.autoInvitation.accepted
 
  public object Data{get;set;}
 
 
 }
 
-public enum EventType
+public enum MessageType
 {
 none=0,
 chatQueued =1,
@@ -1056,3 +961,188 @@ autoInvitationAccepted=18
 
 ```
  
+
+## Service Broker 结构
+
+### MessageType
+
+ |MessageType Name | Validation  | 
+  | - | :-: |
+  | JsonType | None |
+
+
+### Contract
+
+ |Contract Name | Send by  | 
+  | - | :-:|
+  | GeneralContract | Any |
+
+### Message  Service And Queue Relationship
+
+
+  |Message Type Name| Send Service  Name  | Send Service Binding Queue | Recive Service Name |Recive Service  Binding Queue |
+  | - | - | :-: | :-: | :-: |
+  |[chat.queued](#chat.queued)| Chat.Queued.SendService| Chat.Queued.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[chat.started](#chat.started)| Chat.Started.SendService| Chat.Started.SendQueue |WebHook.ReciveService|WebHookQueue|
+  |[chat.ended](#chat.ended)| Chat.Ended.SendService| Chat.Ended.SendQueue |Chat.Ended.ReciveService|Chat.Ended.ReciveQueue|
+  |[chat.wrapup.submitted](#chat.wrapup.submitted)| Chat.Wrapup.Submitted.SendService| Chat.Wrapup.Submitted.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[chat.rating.submitted](#chat.rating.submitted)| Chat.Rating.Submitted.SendService| Chat.Rating.Submitted.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[visitor.landed](#visitor.landed)| Visitor.Landed.Submitted.SendService| Visitor.Landed.Submitted.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[visitor.conversion.achieved](#visitor.conversion.achieved)| Visitor.Conversion.Achieved.SendService| Visitor.Conversion.Achieved.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[ban.added](#ban.added)| Ban.Added.SendService| Ban.Added.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[offlineMessage.submitted](#offlineMessage.submitted)| OfflineMessage.Submitted.SendService| OfflineMessage.Submitted.SendQueue |OfflineMessage.Submitted.ReciveService|OfflineMessage.Submitted.ReciveQueue|
+  |[agent.status.changed](#agent.status.changed)| Agent.Status.Changed.SendService| Agent.Status.Changed.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[agent.preference.changed](#agent.preference.changed)| Agent.Preference.Changed.SendService| Agent.Preference.Changed.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[agentChat.replied](#agentChat.replied)| AgentChat.Replied.SendService| AgentChat.Replied.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[cannedMessage.used](#cannedMessage.used)| CannedMessage.Used.SendService| CannedMessage.Used.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[autoInvitation.log](#autoInvitation.log)| AutoInvitation.Log.SendService| AutoInvitation.Log.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[manualinvitation.log](#manualinvitation.log)| Manualinvitation.Log.SendService| Manualinvitation.Log.SendQueue |Persistence.ReciveService|PersistenceQueue|
+
+### Consume Queue Service 
+
+  | Send Service  Name  | Send Service Binding Queue | Recive Service Name |Recive Service  Binding Queue |
+  | - | :-: | :-: | :-: |
+  | Persistence.SendService| Persistence.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  | Email.SendService| Email.SendQueue |Email.ReciveService|EmailQueue|
+  | Ticket.SendService| Ticket.SendQueue |Ticket.ReciveService|TicketQueue|
+  | Salesforce.SendService| Salesforce.SendQueue |Salesforce.ReciveService|SalesforceQueue|
+  | Zendesk.SendService| Zendesk.SendQueue |Zendesk.ReciveService|ZendeskQueue|
+  | WebHook.SendService| WebHook.SendQueue |WebHook.ReciveService|WebHookQueue|
+  
+
+###  Consume Queues
+
+  | Queue  Name  | description |
+  | - | :-: | 
+  | PersistenceQueue| 持久化队列 |
+  | EmailQueue| 邮件队列 |
+  | TicketQueue| 工单队列 |
+  | SalesforceQueue| salesforce 队列 |
+  | ZendeskQueue| zendesk 队列  |
+  | WebHookQueue|  WebHook队列  |
+
+###  Error Service And Queue
+
+  | Send Service  Name  | Send Service Binding Queue | Recive Service Name |Recive Service  Binding Queue |Message Type Name |
+  | - | :-: | :-: | :-: |:-: |
+  | Error.SendService| Error.SendQueue |Error.ReciveService|ErrorQueue|Error|
+
+### Message type and Data queue relationship table
+
+#### t_queue_message_type
+
+| Column  Name  | Type | Nullable |Default |Version |Primary key|Remark|
+  | - | :-: | :-: | :-: |:-: |:-: |:-: |
+  | Id| int |no||1.0|true|消息类型id|
+  | Name| nvarchar(256) |no|''|1.0|false|类型名称|
+
+
+#### t_data_queue
+
+| Column  Name  | Type | Nullable |Default |Version |Primary key|Remark|
+  | - | :-: | :-: | :-: |:-: |:-: |:-: |
+  | MessgeTypeId| int |no||1.0|false|t_queue_message_type.id 外键|
+  | Name| nvarchar(256) |no|''|1.0|false|队列名称|
+  | SendServiceName| nvarchar(256) |no|''|1.0|false|发送服务名称|
+  | SendQueueName| nvarchar(256) |no|''|1.0|false|发送队列名称|
+  | ReciveServiceName| nvarchar(256) |no|''|1.0|false|接收服务名称|
+  | ReciveQueueName| nvarchar(256) |no|''|1.0|false|接收队列名称|
+
+
+### 创建一个Service Broker 消息队列脚本示例
+
+1. 创建Service Broker 中的一个MessageType
+ ```sql
+
+ CREATE MESSAGE TYPE JsonType
+    VALIDATION = None; --None 指定该MESSAGE TYPE 对消息不做验证
+GO
+
+```
+
+2. 创建Service Broker 中的一个协议Contract
+
+ ```sql
+
+CREATE CONTRACT GeneralContract (
+  JsonType SENT BY ANY  --指定任何端点可以发送所指示的JsonType类型的消息
+);
+GO
+
+```
+
+3. 创建Service Broker 中 发起方服务，发起方发送队列，接收方服务，接收方接收队列 ，以chat.ended 消息为示例
+
+```sql
+
+-- 创建发送/接收队列
+CREATE QUEUE   [Chat.Ended.SendQueue];--创建Chat.Ended消息类型的发送queue
+GO
+CREATE QUEUE  [Chat.Ended.ReciveQueue];--创建Chat.Ended消息类型的接收queue
+GO
+
+
+--创建发起方服务 Chat.Ended.SendService
+CREATE SERVICE  [Chat.Ended.SendService]
+  ON QUEUE [Chat.Ended.SendQueue];
+GO
+
+--创建接收方服务 Chat.Ended.ReciveService
+CREATE SERVICE  [Chat.Ended.ReciveService]
+  ON QUEUE  [Chat.Ended.ReciveQueue]
+    ([GeneralContract]);
+GO
+
+```
+
+
+4.  往Service Broker 中发送消息
+```sql
+
+   -- 定义发送的句柄.
+  DECLARE @InitDlgHandle UNIQUEIDENTIFIER;
+
+  -- 定义变量.
+  DECLARE @MyMessage NVARCHAR(100);
+  -- 设置发送消息的内容.
+  SET @MyMessage = N'HELLO'
+
+  -- 开始事务处理.
+  BEGIN TRANSACTION;
+  -- 定义消息发送处理.
+  BEGIN DIALOG @InitDlgHandle
+    FROM SERVICE  -- 定义发送服务.
+      [Chat.Ended.SendService]
+    TO SERVICE    -- 定义接收服务.
+      N'Chat.Ended.ReciveService'
+    ON CONTRACT   -- 定义使用的约定
+      GeneralContract
+    WITH  -- 不加密.
+      ENCRYPTION = OFF;
+  -- 发送消息.
+  SEND ON CONVERSATION @InitDlgHandle
+    MESSAGE TYPE
+      [JsonType]
+        ( @MyMessage );
+ 
+ 
+  -- 提交事务.
+  COMMIT TRANSACTION;
+
+ 
+
+```       
+
+5. 从  Service Broker 中接收信息
+
+top(1) 表示 1次 从[Chat.Ended.ReciveQueue] 队列中拿取一条信息 ，timeout 5000 表示如果队列中没有数据，将等待5000毫秒超时.
+```sql
+ BEGIN TRANSACTION;
+  waitfor(        
+                RECEIVE top (1) conversation_handle,service_name,message_type_name,message_body,message_sequence_number 
+                FROM [Chat.Ended.ReciveQueue]
+                    ), timeout 5000
+
+ COMMIT TRANSACTION; 
+
+```
