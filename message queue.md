@@ -93,21 +93,15 @@ public class MessageProducer
     {
    
       IMessageContext context=  MessageFactory.Open();
-      MessageData data=new MessageData();
-      data.Type=MessageType.chatEnded;
-      data.Data=chat;
-      string data=SerializeObject(queueData);
-      return  context.Put("chat.ended",data);
+      string data=SerializeObject(chat);
+      return  context.Publish("chat.ended",data);
     }
    
    public bool OfflineMessage(OfflineMessage offlineMessage)
    {
       IMessageContext context=  MessageFactory.Open();
-       MessageData data=new MessageData();
-      queueData.Type=MessageType.offlineMessageSubmitted;
-      queueData.Data=offlineMessage;
-      string data=SerializeObject(queueData);
-      return  context.Put("offlineMessage.submitted",data);
+      string data=SerializeObject(offlineMessage);
+      return  context.Publish("offlineMessage.submitted",data);
 
    }
    ...
@@ -290,13 +284,13 @@ public class EmailConsumer: IConsumer
       IMessageContext context=  MessageFactory.Open();
       try
       {
-      string data= context.Get("EmailQueue");
+      string data= context.Dequeue("EmailQueue");
       if(string.isnullorempty(data))continue;
       QueueData queueData=SerializeObject(data);
       if(queueData==null)
       {
         //添加到错误队列中
-        context.Put("Error",data);
+        context.Publish("Error",data);
         context.Confirm();
         continue;
       }
@@ -307,7 +301,7 @@ public class EmailConsumer: IConsumer
               if(queueData.Data数据格式及内容校验==false)
               {
               //添加到错误队列中
-              context.Put("Error",data);
+              context.Publish("Error",data);
               context.Confirm();
               //记录日志
               continue;
