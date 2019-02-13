@@ -91,17 +91,22 @@ public class MessageProducer
      
     public bool ChatEnd(Chat chat)
     {
-   
-      IMessageContext context=  MessageFactory.Open();
-      string data=SerializeObject(chat);
-      return  context.Publish("chat.ended",data);
+      bool successed=false;
+      using(IMessageContext context=  MessageFactory.Open())
+      {
+       string data=SerializeObject(chat);
+       successed= context.Publish("chat.ended",data);
+      }
+      ret 
     }
    
    public bool OfflineMessage(OfflineMessage offlineMessage)
    {
-      IMessageContext context=  MessageFactory.Open();
+      using(IMessageContext context=  MessageFactory.Open())
+      {
       string data=SerializeObject(offlineMessage);
       return  context.Publish("offlineMessage.submitted",data);
+      }
 
    }
    ...
@@ -109,7 +114,7 @@ public class MessageProducer
     string   SerializeObject(object data)
     {
 
-       return    JsonConvert.SerializeObject(chat);   
+       return    JsonConvert.SerializeObject(data);   
     }   
 
 }
@@ -281,7 +286,8 @@ public class EmailConsumer: IConsumer
   public  void Consume()
   {
        
-      IMessageContext context=  MessageFactory.Open();
+      using(IMessageContext context=  MessageFactory.Open())
+      {
       try
       {
       string data= context.Dequeue("EmailQueue");
@@ -323,6 +329,7 @@ public class EmailConsumer: IConsumer
       {
         context.Reject();
       }   
+      }
   }
 
   
@@ -910,36 +917,13 @@ public class CustomVariable
 public class MessageData
 {
 
-  public MessageType Type{get;set;} //1.chat.queued 2.chat.started 3.chat.visitor.replied 4.chat.agent.replied 5.chat.ended 6.chat.wrapup.submitted 7. chat.rating.submitted 8.visitor.landed 9.visitor.conversion.achieved 10.ban.added 11.offlineMessage.submitted 12.agent.status.changed 13.agent.preference.changed 14.agentChat.replied 15.cannedMessage.used 16.autoInvitation.sent 17.autoInvitation.accepted 18.autoInvitation.accepted
+  public string Type{get;set;} //1.chat.queued 2.chat.started  3.chat.ended 4.chat.wrapup.submitted 5. chat.rating.submitted 6.visitor.landed 7.visitor.conversion.achieved 8.ban.added 9.offlineMessage.submitted 10.agent.status.changed 11.agent.preference.changed 12.agent.chat.replied 13.cannedmessage.used 14.autoinvitation.log 15.manualinvitation.accepted 
 
- public object Data{get;set;}
+ public string Data{get;set;}
 
 
 }
-
-public enum MessageType
-{
-none=0,
-chatQueued =1,
-chatStarted=2 ,
-chatVisitorReplied=3 ,
-chatAgentReplied =4,
-chatEnded =5,
-chatWrapupSubmitted=6 ,
-chatRatingSubmitted =7,
-visitorLanded =8,
-visitorConversionAchieved =9,
-banAdded =10,
-offlineMessageSubmitted=11,
-agentStatusChanged =12,
-agentPreferenceChanged=13 ,
-agentChatReplied =14,
-cannedMessageUsed =15,
-autoInvitationSent=16 ,
-autoInvitationAccepted=17 ,
-autoInvitationAccepted=18
-   
-}
+ 
 
 
 ```
@@ -1057,8 +1041,9 @@ GO
 ```sql
 
 -- 创建发送/接收队列
-CREATE QUEUE   [Chat.Ended.SendQueue];--创建Chat.Ended消息类型的发送queue
-GO
+CREATE QUEUE [dbo].[Chat.Ended.SendQueue] WITH STATUS = ON , RETENTION = OFF , POISON_MESSAGE_HANDLING (STATUS = OFF)  ON [PRIMARY] 
+GO  --创建Chat.Ended消息类型的发送queue
+ 
 CREATE QUEUE  [Chat.Ended.ReciveQueue];--创建Chat.Ended消息类型的接收queue
 GO
 
