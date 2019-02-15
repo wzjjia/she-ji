@@ -35,13 +35,13 @@
   | [visitor.landed](#visitor.landed) |访客登入时提交的信息 |  
   | [visitor.conversion.achieved](#visitor.conversion.achieved) |发生有效客户转换的记录的信息 |   
   | [ban.added](#ban.added) | 添加黑名单资料|   
-  | [offlineMessage.submitted](#offlineMessage.submitted) |离线留言消息 |   
+  | [offlinemessage.submitted](#offlineMessage.submitted) |离线留言消息 |   
   | [agent.status.changed](#agent.status.changed) | 坐席状态改变消息|   
   | [agent.preference.changed](#agent.preference.changed) | 坐席个性化设置变更信息|   
-  | [agentChat.replied](#agentChat.replied) |坐席私聊回复信息 |   
-  | [cannedMessage.used](#cannedMessage.used) | 快捷信息使用时记录的日志 |   
-  | [autoInvitation.log](#autoInvitation.log) | 自动邀请时记录的消息日志 |   
-  | [manualInvitation.log](#manualInvitation.log) | 手动邀请时记录的消息日志 |  
+  | [agentchat.replied](#agentChat.replied) |坐席私聊回复信息 |   
+  | [cannedmessage.used](#cannedmessage.used) | 快捷信息使用时记录的日志 |   
+  | [autoinvitation.log](#autoinvitation.log) | 自动邀请时记录的消息日志 |   
+  | [manualinvitation.log](#manualInvitation.log) | 手动邀请时记录的消息日志 |  
 
 
 
@@ -826,7 +826,7 @@ public class Column
 
 
 
-### agentChat.replied
+### agentchat.replied
 #### Queue
 PersistenceQueue
 #### Data Struct
@@ -849,7 +849,7 @@ public class agentReplied
 
 
 
-###  cannedMessage.used
+###  cannedmessage.used
 #### Queue
 PersistenceQueue
 #### Data Struct
@@ -871,7 +871,7 @@ public class CannedMessage
 ```
 
 
-###  autoInvitation.log
+###  autoinvitation.log
 #### Queue
 PersistenceQueue
 #### Data Struct
@@ -895,7 +895,7 @@ public class AutoInvitationLog
 ```
 
 
-###  autoInvitation.accepted
+###  autoinvitation.accepted
 #### Queue
 PersistenceQueue
 #### Data Struct
@@ -920,7 +920,7 @@ public class AutoInvitationLog
 ```
 
 
-###  autoInvitation.refused
+###  autoinvitation.refused
 #### Queue
 PersistenceQueue
 #### Data Struct
@@ -944,7 +944,7 @@ public class AutoInvitationLog
 
 ```
 
-###  manualInvitation.log
+###  manualinvitation.log
 
 #### Queue
 PersistenceQueue
