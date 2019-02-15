@@ -97,16 +97,19 @@ public class MessageProducer
        string data=SerializeObject(chat);
        successed= context.Publish("chat.ended",data);
       }
-      ret 
+      return  successed;
     }
    
    public bool OfflineMessage(OfflineMessage offlineMessage)
    {
+      bool successed=false;
       using(IMessageContext context=  MessageFactory.Open())
       {
       string data=SerializeObject(offlineMessage);
-      return  context.Publish("offlineMessage.submitted",data);
+      successed=  context.Publish("offlineMessage.submitted",data);
       }
+
+   return successed;
 
    }
    ...
@@ -135,9 +138,10 @@ public class MessageProducer
  public void  Initialize()//消费者初始化，在程序启动的时候调用一次即可
  {
     
-     int emailThreadHandleCount = 0;
+     int emailThreadHandleCount ,  maxEmailThreadCount;
      int.TryParse(ConfigurationManager.AppSettings["EmailThreadHandleCount"].ToString(),out emailThreadHandleCount);//邮件消费队列，每个线程处理数，实际消费线程数是该值的倍数。
-     ConsumerManager.Run(new EmailConsumer(), emailThreadHandleCount);
+      int.TryParse(ConfigurationManager.AppSettings["maxEmailThreadCount"].ToString(),out emailThreadHandleCount);//邮件消费队列 最大线程处理数
+     ConsumerManager.Run(new EmailConsumer(), emailThreadHandleCount,maxEmailThreadCount);
      ...//在此加入其它消费队列实现。
  }
 
@@ -161,12 +165,14 @@ public class MessageProducer
         private ConcurrentBag<ConsumerThread> threads;
         private IConsumer consumer;
         private int everyThreadHandleCount;
+        private int maxThreadCount = 0;
         private int queueDataCount = 0;
         private Thread queryCountThread = null;
-        public ConsumerWrap(IConsumer consumer, int everyThreadHandleCount)
+        public ConsumerWrap(IConsumer consumer, int everyThreadHandleCount,int maxThreadCount)
         {
             this.consumer = consumer;
             this.everyThreadHandleCount = everyThreadHandleCount;
+            this.maxThreadCount=maxThreadCount;
             this.threads = new ConcurrentBag<ConsumerThread>();
             this.UpdateConsumers(everyThreadHandleCount);
             this.queryCountThread = new Thread(QueryCount);
@@ -212,7 +218,8 @@ public class MessageProducer
                 {
                     context = MessageFactory.Open();
                     queueDataCount = context.GetCount(consumer.QueueName);
-                    this.UpdateConsumers(queueDataCount);
+                    if (threads.Count <= maxThreadCount)
+                     this.UpdateConsumers(queueDataCount);
                 }
                 catch (Exception ex)
                 {
@@ -290,7 +297,7 @@ public class EmailConsumer: IConsumer
       {
       try
       {
-      string data= context.Dequeue("EmailQueue");
+      string data= context.Dequeue(QueueName);
       if(string.isnullorempty(data))continue;
       QueueData queueData=SerializeObject(data);
       if(queueData==null)
