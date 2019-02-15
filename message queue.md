@@ -557,7 +557,7 @@ public class Wrapup
  
   public int SiteId{get;set;}
   public int AgentId{get;set;}
-  public int ChatId{get;set;}
+  public string ChatId{get;set;}
   public int CategoryId{get;set;}
   public List<int> CategoryList{get;set;}
   public string Comment{get;set;}
@@ -579,7 +579,7 @@ public class Wrapup
 public class Rating
 {
   public int SiteId{get;set;}
-  public int ChatId{get;set;}
+  public string ChatId{get;set;}
   public string ChatGuid{get;set;}
   public int ratingGrade{get;set;}
   public string ratingComment{get;set;}
@@ -654,7 +654,6 @@ public class Ban
   public long IpFromOrVisitorId{get;set;}
   public long IpTo{get;set;}
   public string Comment{get;set;}
-  public int OperatorId{get;set;}
 }
 
 
@@ -743,6 +742,60 @@ public class SavePreference
 
   public int SiteId{get;set;}
   public int  AgentId{get;set;}
+  public bool IfSetPushNotificationConfig{get;set;}
+  public bool IfSetFontSizeAndNewFeatureNofify{get;set;}
+  public bool IfChatEndedSoundOn{get;set;}
+  public bool IfIncomingChatSoundOn{get;set;}
+  public bool ifNewResponseSoundOn{get;set;}
+  public bool IfAgentMessageSoundOn{get;set;}
+  public bool IfTransferringChatSoundOn{get;set;}
+  public bool IfVisitorEnterSiteSoundOn{get;set;}
+  public bool IfExceptionSoundOn{get;set;}
+  public int VisitorEnterSiteSoundId{get;set;}
+  public int IncomingChatSoundId{get;set;}
+  public int TransferringChatSoundId{get;set;}
+  public int NewReponseSoundId{get;set;}
+  public int ChatEndedSoundId{get;set;}
+  public int ExceptionSounndId{get;set;}
+  public int VisitorEnterSiteSoundVolumn{get;set}
+  public int IncommingChatSoundVolumn{get;set;}
+  public int TransferringChatSoundVolumn{get;set;}
+  public int NewReponseSoundVolumn{get;set;}
+  public int AgentMessageSoundVolumn{get;set;}
+  public int AgentMessageSoundId{get;set;}
+  public int ChatEndedSoundVolumn{get;set;}
+  public int ExceptionSoundVolumn{get;set;}
+  public bool TextDirectionIfRightToLeft{get;set;}
+  public bool IfEnableSpellCheck{get;set;}
+  public bool IfAutoSendMessageWhenAcceptChat{get;set;}
+  public string MessageWhenAcceptChat{get;set;}
+  public int SendShortcut{get;set;}
+  public bool IfVisitorEnterSiteAlertPopup{get;set;}
+  public bool IfIncomingChatAlertPopup{get;set;}
+  public bool IfTransferringChatAlertPopup{get;set;}
+  public bool IfNewReponseAlertPopup{get;set;}
+  public bool IfChatEndedAlertPopup{get;set;}
+  public bool IfExceptionAlertPopup{get;set;}
+  public bool IfAgentMessageAlertPopup{get;set;}
+  public int SpellCheckType{get;set;}
+  public bool IfPushNotificationInSiteOn{get;set;}
+  public bool IfPushNotificationChatRequestOn{get;set;}
+  public bool IfPushNotificationNewResponseOn{get;set;}
+  public bool IfNotificationTransferChatOn{get;set;}
+  public bool IfPushNotificationChatEnedOn{get;set;}
+  public long NewFeatureNotify{get;set;}
+  public int CurrentURLDisplay{get;set;}
+  public int ChatWindowFontSize{get;set;}
+  public bool IfEnableTranslate{get;set;}
+  public int TranslateLanguage{get;set;}
+  public bool IfChatInQueueSoundOn{get;set;}
+  public int ChatInQueueSounId{get;set;}
+  public int ChatInQueueSoundVolume{get;set;}
+  public int IfChatInQueuePopup{get;set;}
+  public bool IfChatQueueNotification{get;set;}
+
+  public string Ohters{get;set;}
+
   public List<Column> Columns{get;set;}
 }
 
