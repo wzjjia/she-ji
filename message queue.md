@@ -306,7 +306,7 @@ public class EmailConsumer: IConsumer
       try
       {
       string data= context.Dequeue(QueueName);
-      if(string.isnullorempty(data))continue;
+      if(string.isnullorempty(data)) return;
       QueueData queueData=SerializeObject(data);
       if(queueData==null)
       {
