@@ -386,6 +386,17 @@ WebHookQueue
 #### Data Struct
 
 
+```c#
+    
+public class chatStart
+{
+ 
+  public int SiteId{get;set;}
+  public int VisitorId{get;set;}
+  public string ChatOrOfflineMessageId{get;set;}
+}
+ 
+```
  
 
 
