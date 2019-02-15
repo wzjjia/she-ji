@@ -75,16 +75,6 @@ public void Initialize()
 
 ```c# 
 
- 
-public class MessageData
-{
-
-  public MessageType Type{get;set;} 
-
- public object Data{get;set;}
-
-}
-
 
 public class MessageProducer
 {
