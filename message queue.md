@@ -141,6 +141,8 @@ public class MessageProducer
      int emailThreadHandleCount ,  maxEmailThreadCount;
      int.TryParse(ConfigurationManager.AppSettings["EmailThreadHandleCount"].ToString(),out emailThreadHandleCount);//邮件消费队列，每个线程处理数，实际消费线程数是该值的倍数。
       int.TryParse(ConfigurationManager.AppSettings["MaxEmailThreadCount"].ToString(),out maxEmailThreadCount);//邮件消费队列 最大线程处理数
+     ServerConfig serverConfig;// 初始化并且配置ServerConfig
+     ConsumerManager.Initialize(serverConfig);
      ConsumerManager.Run(new EmailConsumer(), emailThreadHandleCount,maxEmailThreadCount);
      ...//在此加入其它消费队列实现。
  }
@@ -149,6 +151,12 @@ public class MessageProducer
     {
 
         private static Dictionary<string, ConsumerWrap> consumers = new Dictionary<string, ConsumerWrap>();
+        private static ServerConfig _serverConfig;
+        public static void Initialize(ServerConfig serverConfig)
+        {
+            _serverConfig = serverConfig;
+            MessageFactory.Initialize(_serverConfig);
+        }
 
         public static void Run(IConsumer consumer,int everyThreadHandleCount)
         {
