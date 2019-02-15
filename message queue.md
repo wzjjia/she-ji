@@ -835,7 +835,7 @@ PersistenceQueue
 ```c#
     
 
-public class PrivateMessageLog
+public class agentReplied
 {
  public int SiteId{get;set;}
   public int FromAgentId{get;set;}
@@ -1043,6 +1043,9 @@ public class MessageData
   |[cannedMessage.used](#cannedMessage.used)| CannedMessage.Used.SendService| CannedMessage.Used.SendQueue |Persistence.ReciveService|PersistenceQueue|
   |[autoInvitation.log](#autoInvitation.log)| AutoInvitation.Log.SendService| AutoInvitation.Log.SendQueue |Persistence.ReciveService|PersistenceQueue|
   |[manualinvitation.log](#manualinvitation.log)| Manualinvitation.Log.SendService| Manualinvitation.Log.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  
+  
+
 
 ### Consume Queue Service 
 
