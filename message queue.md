@@ -140,7 +140,7 @@ public class MessageProducer
     
      int emailThreadHandleCount ,  maxEmailThreadCount;
      int.TryParse(ConfigurationManager.AppSettings["EmailThreadHandleCount"].ToString(),out emailThreadHandleCount);//邮件消费队列，每个线程处理数，实际消费线程数是该值的倍数。
-      int.TryParse(ConfigurationManager.AppSettings["maxEmailThreadCount"].ToString(),out emailThreadHandleCount);//邮件消费队列 最大线程处理数
+      int.TryParse(ConfigurationManager.AppSettings["MaxEmailThreadCount"].ToString(),out maxEmailThreadCount);//邮件消费队列 最大线程处理数
      ConsumerManager.Run(new EmailConsumer(), emailThreadHandleCount,maxEmailThreadCount);
      ...//在此加入其它消费队列实现。
  }
@@ -1050,8 +1050,8 @@ GO
 -- 创建发送/接收队列
 CREATE QUEUE [dbo].[Chat.Ended.SendQueue] WITH STATUS = ON , RETENTION = OFF , POISON_MESSAGE_HANDLING (STATUS = OFF)  ON [PRIMARY] 
 GO  --创建Chat.Ended消息类型的发送queue
- 
-CREATE QUEUE  [Chat.Ended.ReciveQueue];--创建Chat.Ended消息类型的接收queue
+
+CREATE QUEUE [dbo].[Chat.Ended.ReciveQueue] WITH STATUS = ON , RETENTION = OFF , POISON_MESSAGE_HANDLING (STATUS = OFF)  ON [PRIMARY] --创建Chat.Ended消息类型的接收queue
 GO
 
 
