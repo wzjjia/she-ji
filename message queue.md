@@ -403,7 +403,7 @@ public class chatStart
 ```c#
     public class Chat
     {
-      public string ChatId{get;set;}
+      public string ChatGuid{get;set;}
       public long  SessionId{get;set;}
       public int SiteId{get;set;}
       public List<int> AgentIds{get;set;}
@@ -530,7 +530,7 @@ public class chatStart
     public class BotAction
     {
       public string Guid{get;set;}
-      public int ChatId{get;set;}
+      public string ChatGuid{get;set;}
       public string OriginalQuestion{get;set;}
       public int StandardQuestionId{get;set;}
       public int  BotAnswerType{get;set;} //0 HighConfidenceAnswer,1  PossibleAnswer ,2 NoAnswer
@@ -558,7 +558,7 @@ public class Wrapup
  
   public int SiteId{get;set;}
   public int AgentId{get;set;}
-  public string ChatId{get;set;}
+  public string Chat{get;set;}
   public int CategoryId{get;set;}
   public List<int> CategoryList{get;set;}
   public string Comment{get;set;}
@@ -580,7 +580,6 @@ public class Wrapup
 public class Rating
 {
   public int SiteId{get;set;}
-  public string ChatId{get;set;}
   public string ChatGuid{get;set;}
   public int ratingGrade{get;set;}
   public string ratingComment{get;set;}
@@ -625,14 +624,14 @@ public class ConversionLog
   public string ConversionName{get;set;}
   public long VisitorId{get;set;}
   public long CookIdenitityId{get;set;}
-  public int ChatId{get;set;}
+  public string ChatGuid{get;set;}
   public int DepartmentId{get;set;}
   public int RelatedOperatorId{get;set;}
   public string AppendInfo{get;set;}
   public double ConversionValue{get;set;}
   public DateTime CreateTime{get;set;}
   publ ic bool HasAddToDatabase{get;set;}
-  public int CurrentChatId{get;set;}
+  public string CurrentChatGuid{get;set;}
   public int CurrentDepartmentId{get;set;}
   public int ConversionAccelerateType{get;set;}//0 firstChat 1 lastChat
 
@@ -688,7 +687,7 @@ public class Ban
     public string Language{get;set;}
     public int SiteId{get;set;}
     public long SessionId{get;set;} 
-    public string SourceChatId{get;set;}
+    public string SourceChatGuid{get;set;}
     public int CampainId{get;set;}
     public int TicketId{get;set;}
     public int RouteToId{get;set;}
@@ -850,7 +849,7 @@ public class CannedMessage
 {
  
   public int SiteId{get;set;}
-  public int ChatId{get;set;}
+  public string ChatGuid{get;set;}
   public int AgentId{get;set;}
   public int CannedMessgeId{get;set;}
   public DateTime Time{get;set;}
