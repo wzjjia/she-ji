@@ -585,6 +585,7 @@ public class Rating
   public string ratingComment{get;set;}
   public List<CustomField> CustomFields{get;set;}
   public List<CustomVariable> CustomVariables{get;set;}
+  public bool IsSyncChatToRemoteServer{get;set;}
 }
  
 ```
