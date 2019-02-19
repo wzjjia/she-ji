@@ -120,6 +120,8 @@ public class MessageProducer
 ###  Consumer
 
   ![imq](consume.png)
+
+ 注意，Error 队列 ，存放 从消息队列中取出来的数据格式有问题的数据，或者调用接口 由于数据原因出错，处理失败的队列数据。不加入该队列的数据处理场景，例如：由于网络问题，导致发送邮件失败，或者调用webhook失败。
 ```c# 
   
 
@@ -1029,7 +1031,7 @@ public class MessageData
   |[offlineMessage.submitted](#offlineMessage.submitted)| OfflineMessage.Submitted.SendService| OfflineMessage.Submitted.SendQueue |OfflineMessage.Submitted.ReciveService|OfflineMessage.Submitted.ReciveQueue|
   |[agent.status.changed](#agent.status.changed)| Agent.Status.Changed.SendService| Agent.Status.Changed.SendQueue |Persistence.ReciveService|PersistenceQueue|
   |[agent.preference.changed](#agent.preference.changed)| Agent.Preference.Changed.SendService| Agent.Preference.Changed.SendQueue |Persistence.ReciveService|PersistenceQueue|
-  |[agentChat.replied](#agentChat.replied)| AgentChat.Replied.SendService| AgentChat.Replied.SendQueue |Persistence.ReciveService|PersistenceQueue|
+  |[agentchat.replied](#agentchat.replied)| AgentChat.Replied.SendService| AgentChat.Replied.SendQueue |Persistence.ReciveService|PersistenceQueue|
   |[cannedMessage.used](#cannedMessage.used)| CannedMessage.Used.SendService| CannedMessage.Used.SendQueue |Persistence.ReciveService|PersistenceQueue|
   |[autoInvitation.log](#autoInvitation.log)| AutoInvitation.Log.SendService| AutoInvitation.Log.SendQueue |Persistence.ReciveService|PersistenceQueue|
   |[manualinvitation.log](#manualinvitation.log)| Manualinvitation.Log.SendService| Manualinvitation.Log.SendQueue |Persistence.ReciveService|PersistenceQueue|
@@ -1087,6 +1089,16 @@ public class MessageData
 
 
 ### 创建一个Service Broker 消息队列脚本示例
+
+ ```sql
+
+ ALTER DATABASE [DB_NAME]  SET NEW_BROKER WITH ROLLBACK IMMEDIATE;
+
+GO
+ALTER DATABASE  [DB_NAME] SET ENABLE_BROKER;
+
+GO
+```
 
 1. 创建Service Broker 中的一个MessageType
  ```sql
@@ -1193,7 +1205,7 @@ top(1) 表示 1次 从[Chat.Ended.ReciveQueue] 队列中拿取一条信息 ，ti
 ```sql
 
 CREATE QUEUE   [Persistence.SendQueue];
-CREATE QUEUE  [Persistence.ReciveQueue];
+CREATE QUEUE  [PersistenceQueue];
 GO
 
  
@@ -1204,7 +1216,7 @@ GO
 
  
 CREATE SERVICE  [Persistence.ReciveService]
-  ON QUEUE  [Persistence.ReciveQueue]
+  ON QUEUE  [PersistenceQueue]
     ([GeneralContract]);
 GO
 
@@ -1323,7 +1335,7 @@ END
 7. 队列绑定存储过程
 ```sql
   
-ALTER QUEUE Chat.Ended.ReciveQueue
+ALTER QUEUE [Chat.Ended.ReciveQueue]
   WITH ACTIVATION
     ( STATUS = ON,
       PROCEDURE_NAME = ChatEndedProcedure,
