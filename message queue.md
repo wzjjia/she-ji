@@ -299,15 +299,15 @@ public class EmailConsumer: IConsumer
       {
       string data= context.Dequeue(QueueName);
       if(string.isnullorempty(data)) return;
-      QueueData queueData=SerializeObject(data);
-      if(queueData==null)
+      MessageData messageData=SerializeObject(data);
+      if(messageData==null)
       {
         //添加到错误队列中
         context.Publish("Error",data);
         context.Confirm();
         continue;
       }
-      switch(queueData.Type)
+      switch(messageData.Type)
       {
         ...
         case MessageType.offlineMessageSubmitted:
@@ -408,6 +408,7 @@ public class chatStart
       public string ChatGuid{get;set;}
       public long  SessionId{get;set;}
       public int SiteId{get;set;}
+      public Visitor Visitor{get;set;}
       public List<int> AgentIds{get;set;}
       public DateTime  Start{get;set;}
       public DateTime End{get;set;}
@@ -560,7 +561,8 @@ public class Wrapup
  
   public int SiteId{get;set;}
   public int AgentId{get;set;}
-  public string Chat{get;set;}
+  public string ChatGuid{get;set;}
+  public string VisitorGuid{get;set;}
   public int CategoryId{get;set;}
   public List<int> CategoryList{get;set;}
   public string Comment{get;set;}
@@ -1002,6 +1004,17 @@ public class MessageData
 
 ## Service Broker 结构
 
+### t_message_route 
+  消息队列路由表，在此表中加入消息类型和该消息需要路由到的队列名称，系统将自动创建对应的Service和Queue
+ 
+| Column  Name  | Type | Nullable |Default |Version |Primary key|Remark|
+  | - | :-: | :-: | :-: |:-: |:-: |:-: |
+  | message_type_name| nvarchar(200) |no||1.0|true|消息类型|
+  | queue_name| nvarchar(200) |no|''|1.0|false|队列名称|
+
+
+
+
 ### MessageType
 
  |MessageType Name | Validation  | 
@@ -1068,24 +1081,9 @@ public class MessageData
   | - | :-: | :-: | :-: |:-: |
   | Error.SendService| Error.SendQueue |Error.ReciveService|ErrorQueue|Error|
 
-### Message type and Data queue relationship table
-
-#### t_queue_message_type
-
-| Column  Name  | Type | Nullable |Default |Version |Primary key|Remark|
-  | - | :-: | :-: | :-: |:-: |:-: |:-: |
-  | Id| int |no||1.0|true|消息类型id|
-  | Name| nvarchar(256) |no|''|1.0|false|类型名称|
 
 
-#### t_data_queue
-
-| Column  Name  | Type | Nullable |Default |Version |Primary key|Remark|
-  | - | :-: | :-: | :-: |:-: |:-: |:-: |
-  | MessgeTypeId| int |no||1.0|false|t_queue_message_type.id 外键|
-  | Name| nvarchar(256) |no|''|1.0|false|队列名称|
-  | SendServiceName| nvarchar(256) |no|''|1.0|false|发送服务名称|
-  | ReciveServiceName| nvarchar(256) |no|''|1.0|false|接收服务名称|
+ 
 
 
 ### 创建一个Service Broker 消息队列脚本示例
@@ -1229,6 +1227,9 @@ GO
 ```sql
   
  
+ USE [dbname]
+GO
+/****** Object:  StoredProcedure [dbo].[ChatEndedProcedure]    Script Date: 2/20/2019 3:30:25 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -1243,11 +1244,11 @@ BEGIN
   -- 接收到的数据类型名称.
   DECLARE @RecvReqMsgName sysname;
   -- 循环处理.
-  WHILE (1=1)
-  BEGIN
+  --WHILE (1=1)
+  --BEGIN
     -- 开始事务处理.
     BEGIN TRANSACTION;
-    -- 尝试从 SayHelloReceiveQueue 队列 接收消息.
+    -- 尝试从   队列 接收消息.
     WAITFOR
     ( RECEIVE TOP(1)
         @RecvReqDlgHandle = conversation_handle,
@@ -1262,7 +1263,8 @@ BEGIN
       -- 回滚事务.
       ROLLBACK TRANSACTION;
       -- 跳出循环.
-      BREAK;
+	  return;
+     -- BREAK;
     END
     
     BEGIN
@@ -1324,9 +1326,8 @@ DEALLOCATE q_names;
     END;
     -- 提交事务.
     COMMIT TRANSACTION;
-  END
+  --END
 END
-
 
 
 ```
